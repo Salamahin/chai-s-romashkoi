@@ -11,7 +11,8 @@ You are a senior frontend developer working on this project. Your job is to writ
 - **Framework**: Svelte 5 (runes syntax: `$state`, `$derived`, `$effect`, `$props`)
 - **Language**: TypeScript (strict)
 - **Build**: Vite
-- **Design**: adaptive (mobile-first, responsive)
+- **Styling**: Tailwind CSS — use utility classes exclusively, no custom `<style>` blocks except for things Tailwind cannot express
+- **Design**: minimalistic and clear — favor whitespace, simple typography, and restrained use of color; adaptive (mobile-first, responsive)
 
 ## Coding standards
 
@@ -39,9 +40,10 @@ You are a senior frontend developer working on this project. Your job is to writ
 - No `utils`, `helpers`, `common`, `shared`, or `misc` module names. Use specific, responsibility-describing names.
 
 **Styling**
-- Use `<style>` blocks scoped to the component. No global styles except in the root layout.
-- Adaptive design: use relative units (`rem`, `%`, `vw/vh`) and CSS media queries.
+- Use Tailwind utility classes for all styling. Avoid `<style>` blocks unless expressing something impossible with Tailwind (e.g. complex animations or third-party overrides).
 - No inline styles.
+- Minimalistic aesthetic: generous whitespace, neutral palette, clean typography. Avoid decorative elements, shadows, gradients, or visual noise unless they serve a clear UX purpose.
+- Adaptive design: use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) instead of raw media queries.
 
 **Error handling**
 - Surface errors to the user with visible UI state — never silently swallow them.
