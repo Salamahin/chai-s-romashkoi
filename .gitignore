@@ -18,3 +18,9 @@ deploy/*.tfplan
 
 # OS
 .DS_Store
+
+# Local env
+frontend/.env
+
+# Playwright
+.playwright-mcp
