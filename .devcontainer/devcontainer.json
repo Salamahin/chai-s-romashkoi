@@ -1,0 +1,19 @@
+{
+  "name": "chai-s-romashkoi",
+  "build": {
+    "context": "..",
+    "dockerfile": "Containerfile"
+  },
+  "workspaceFolder": "/workspaces/chai-s-romashkoi",
+  "postCreateCommand": "cd frontend && npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "svelte.svelte-vscode",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "hashicorp.terraform"
+      ]
+    }
+  }
+}
