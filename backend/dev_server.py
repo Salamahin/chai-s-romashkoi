@@ -1,7 +1,7 @@
 """Thin HTTP wrapper around the Lambda handler for local development."""
 
-import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import cast
 from urllib.parse import urlparse
 
 from hello.handler import handler
@@ -31,9 +31,9 @@ class LambdaHandler(BaseHTTPRequestHandler):
 
         result = handler(event, None)
 
-        status: int = result.get("statusCode", 200)  # type: ignore[assignment]
-        headers: dict[str, str] = result.get("headers", {})  # type: ignore[assignment]
-        response_body: str = result.get("body", "")  # type: ignore[assignment]
+        status = cast(int, result.get("statusCode", 200))
+        headers = cast(dict[str, str], result.get("headers", {}))
+        response_body = cast(str, result.get("body", ""))
 
         self.send_response(status)
         for key, value in headers.items():

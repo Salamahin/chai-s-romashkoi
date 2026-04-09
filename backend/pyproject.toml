@@ -29,4 +29,5 @@ select = ["E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src"]
+mypy_path = ["src"]
+files = ["src", "dev_server.py"]
