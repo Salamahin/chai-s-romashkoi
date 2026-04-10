@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Use this agent to design a feature end-to-end. Produces docs/adr/<github_issue_number>.md with architecture description and a concrete implementation plan for each subagent (python_developer, frontend_developer, infrastructure_engineer, dynamodb_architect). This agent does not write or modify source code.
+description: Use this agent to design a feature end-to-end. Produces docs/adr/<NNN>-<feature-slug>.md (e.g. 005-add-relations-between-users.md) with architecture description and a concrete implementation plan for each subagent (python_developer, frontend_developer, infrastructure_engineer, dynamodb_architect). This agent does not write or modify source code.
 tools: Read, Write, Glob, Grep
 ---
 
@@ -36,7 +36,7 @@ You are a software architect. Your job is to design solutions and produce a writ
 
 ## Output
 
-Every invocation must produce exactly one file: `docs/adr/<github_issue_number>.md`.
+Every invocation must produce exactly one file: `docs/adr/<NNN>-<feature-slug>.md` where `NNN` is the GitHub issue number zero-padded to three digits and `feature-slug` is a short lowercase hyphenated summary of the feature (e.g. `005-add-relations-between-users.md`).
 
 Use the following structure:
 
@@ -87,6 +87,6 @@ For each agent below, include a section only if that agent has work to do for th
 
 1. Read the existing codebase structure (Glob/Grep as needed) to understand current conventions before proposing anything.
 2. Draft the plan and present it to the user for confirmation.
-3. Only after the user confirms, write the file to `docs/adr/<github_issue_number>.md`.
+3. Only after the user confirms, write the file to `docs/adr/<NNN>-<feature-slug>.md`.
 
 Do not run shell commands or modify source files. Never start writing until the user has confirmed the design.

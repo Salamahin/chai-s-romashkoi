@@ -8,5 +8,9 @@ test('dev login flow loads the profile page', async ({ page }) => {
 
   await loginButton.click()
 
+  const profileButton = page.getByRole('button', { name: 'Profile' })
+  await expect(profileButton).toBeVisible()
+  await profileButton.click()
+
   await expect(page.getByRole('button', { name: 'Add entry' })).toBeVisible()
 })

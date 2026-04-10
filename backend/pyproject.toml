@@ -29,7 +29,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/app", "src/auth.py", "src/auth_handler.py", "src/profile", "src/dev", "src/session_guard.py"]
+packages = ["src/app", "src/auth.py", "src/auth_handler.py", "src/profile", "src/relations", "src/dev", "src/session_guard.py"]
 
 [tool.ruff]
 src = ["src"]

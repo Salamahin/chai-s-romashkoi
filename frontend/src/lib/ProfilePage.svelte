@@ -5,12 +5,14 @@
   import { getSessionToken, clearSession } from './auth_service'
   import { getProfile, saveProfile, getKnownTags } from './profile_service'
   import type { ProfileEntry as ApiEntry } from './profile_service'
+  import RelationsPanel from './RelationsPanel.svelte'
 
   interface Props {
+    onback: () => void
     onclearauth: () => void
   }
 
-  const { onclearauth }: Props = $props()
+  const { onback, onclearauth }: Props = $props()
 
   type LoadState = 'loading' | 'ready' | 'error'
 
@@ -21,6 +23,7 @@
   let saving = $state(false)
   let saveError: string = $state('')
   let saveSuccess = $state(false)
+  let token: string | null = $state(null)
 
   function toUiEntry(e: ApiEntry): ProfileEntry {
     return { id: e.entry_id, tag: e.tag, text: e.text, updated_at: e.updated_at }
@@ -31,14 +34,15 @@
   }
 
   onMount(async () => {
-    const token = getSessionToken()
-    if (!token) {
+    const t = getSessionToken()
+    if (!t) {
       clearSession()
       onclearauth()
       return
     }
+    token = t
     try {
-      const [snapshot, tags] = await Promise.all([getProfile(token), getKnownTags(token)])
+      const [snapshot, tags] = await Promise.all([getProfile(t), getKnownTags(t)])
       entries = snapshot.entries.map(toUiEntry)
       knownTags = tags
       loadState = 'ready'
@@ -52,14 +56,14 @@
     saving = true
     saveError = ''
     saveSuccess = false
-    const token = getSessionToken()
-    if (!token) {
+    const t = getSessionToken()
+    if (!t) {
       clearSession()
       onclearauth()
       return
     }
     try {
-      const snapshot = await saveProfile(token, { entries: entries.map(toApiEntry) })
+      const snapshot = await saveProfile(t, { entries: entries.map(toApiEntry) })
       entries = snapshot.entries.map(toUiEntry)
       saveSuccess = true
       setTimeout(() => { saveSuccess = false }, 2000)
@@ -79,7 +83,16 @@
 
 <div class="min-h-screen bg-gray-50">
   <div class="mx-auto max-w-xl px-4 py-8">
-    <h1 class="mb-6 text-xl font-semibold text-gray-800 tracking-tight">Profile</h1>
+    <div class="mb-6 flex items-center gap-4">
+      <button
+        type="button"
+        onclick={onback}
+        class="text-sm text-gray-500 hover:text-gray-800 transition-colors"
+      >
+        ← Back
+      </button>
+      <h1 class="text-xl font-semibold text-gray-800 tracking-tight">Profile</h1>
+    </div>
 
     {#if loadState === 'loading'}
       <p class="text-sm text-gray-400">Loading…</p>
@@ -112,6 +125,10 @@
           <span class="text-sm text-red-500">{saveError}</span>
         {/if}
       </div>
+
+      {#if token !== null}
+        <RelationsPanel sessionToken={token} {onclearauth} />
+      {/if}
     {/if}
   </div>
 </div>

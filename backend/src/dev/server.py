@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import uuid
 from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Annotated, Any
@@ -12,7 +13,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 load_dotenv()
 
@@ -22,8 +23,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from profile.domain import Profile, ProfileEntry, apply_patch, compute_patch, normalise_entry  # noqa: E402
 from profile.tags import STANDARD_TAGS, known_tags  # noqa: E402
 
-from app.handler import make_hello_response  # noqa: E402
 from auth import SessionClaims, VerificationError, sign_session_token, verify_session_token  # noqa: E402
+from relations.domain import RelationRecord, build_send_records, normalise_label  # noqa: E402
+from relations.label_suggestions import known_labels  # noqa: E402
 
 app = FastAPI()
 
@@ -37,7 +39,60 @@ app.add_middleware(
 # In-memory store: user_sub -> Profile
 _profile_store: dict[str, Profile] = {}
 
+# In-memory store: (owner_email, relation_id) -> RelationRecord
+_relations_store: dict[tuple[str, str], RelationRecord] = {}
+
 DEV_SUB = "dev"
+DEV_EMAIL = "dev@local.dev"
+
+
+# Seed: one pending-received and one confirmed relation for dev@local.dev on startup
+def _seed_relations() -> None:
+    _pending_id = "00000000-0000-0000-0000-000000000001"
+    _confirmed_id = "00000000-0000-0000-0000-000000000002"
+    _ts = "2026-04-10T10:00:00Z"
+
+    pending_received = RelationRecord(
+        relation_id=_pending_id,
+        owner_email=DEV_EMAIL,
+        peer_email="alice@example.com",
+        label="friend",
+        status="pending",
+        direction="received",
+        created_at=_ts,
+    )
+    pending_sent_peer = RelationRecord(
+        relation_id=_pending_id,
+        owner_email="alice@example.com",
+        peer_email=DEV_EMAIL,
+        label="friend",
+        status="pending",
+        direction="sent",
+        created_at=_ts,
+    )
+    confirmed_dev = RelationRecord(
+        relation_id=_confirmed_id,
+        owner_email=DEV_EMAIL,
+        peer_email="bob@example.com",
+        label="colleague",
+        status="confirmed",
+        direction="received",
+        created_at=_ts,
+    )
+    confirmed_peer = RelationRecord(
+        relation_id=_confirmed_id,
+        owner_email="bob@example.com",
+        peer_email=DEV_EMAIL,
+        label="colleague",
+        status="confirmed",
+        direction="sent",
+        created_at=_ts,
+    )
+    for r in (pending_received, pending_sent_peer, confirmed_dev, confirmed_peer):
+        _relations_store[(r.owner_email, r.relation_id)] = r
+
+
+_seed_relations()
 
 _SESSION_SECRET = os.environ["SESSION_SECRET"]
 _SESSION_TTL_SECONDS = int(os.environ.get("SESSION_TTL_SECONDS", "900"))
@@ -59,17 +114,31 @@ def _get_profile(user_sub: str) -> Profile:
     return _profile_store.get(user_sub, Profile(user_sub=user_sub, entries=()))
 
 
+def _list_relations(owner_email: str) -> tuple[RelationRecord, ...]:
+    records = [r for (email, _), r in _relations_store.items() if email == owner_email]
+    return tuple(sorted(records, key=lambda r: r.created_at))
+
+
+def _count_pending_received(owner_email: str) -> int:
+    return sum(
+        1
+        for r in _relations_store.values()
+        if r.owner_email == owner_email and r.status == "pending" and r.direction == "received"
+    )
+
+
 @app.post("/auth/session")
 async def auth_session() -> JSONResponse:
     now_utc = _now_utc()
-    claims = SessionClaims(sub=DEV_SUB, email="dev@local.dev", exp=0)
+    claims = SessionClaims(sub=DEV_SUB, email=DEV_EMAIL, exp=0)
     token = sign_session_token(claims, _SESSION_SECRET, now_utc, _SESSION_TTL_SECONDS)
     return JSONResponse({"session_token": token})
 
 
 @app.get("/")
 async def hello(claims: Annotated[SessionClaims, Depends(_require_session)]) -> JSONResponse:
-    return JSONResponse(asdict(make_hello_response()))
+    count = _count_pending_received(claims.email)
+    return JSONResponse({"message": "hello from chai-s-romashkoi", "pending_relations_count": count})
 
 
 @app.get("/profile")
@@ -113,6 +182,112 @@ async def get_profile_tags(claims: Annotated[SessionClaims, Depends(_require_ses
     profile = _get_profile(claims.sub)
     tags = sorted(known_tags(profile) | set(STANDARD_TAGS))
     return JSONResponse({"tags": tags})
+
+
+@app.get("/relations")
+async def get_relations(claims: Annotated[SessionClaims, Depends(_require_session)]) -> JSONResponse:
+    records = _list_relations(claims.email)
+    return JSONResponse({"relations": [asdict(r) for r in records]})
+
+
+@app.post("/relations")
+async def post_relations(
+    request: Request,
+    claims: Annotated[SessionClaims, Depends(_require_session)],
+) -> JSONResponse:
+    try:
+        body: dict[str, Any] = await request.json()
+        recipient_email = str(body["recipient_email"])
+        label = normalise_label(str(body["label"]))
+    except (KeyError, ValueError):
+        return JSONResponse({"error": "invalid body"}, status_code=400)
+
+    relation_id = str(uuid.uuid4())
+    created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        sender_copy, recipient_copy = build_send_records(claims.email, recipient_email, label, relation_id, created_at)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    _relations_store[(sender_copy.owner_email, sender_copy.relation_id)] = sender_copy
+    _relations_store[(recipient_copy.owner_email, recipient_copy.relation_id)] = recipient_copy
+    return JSONResponse(asdict(sender_copy), status_code=201)
+
+
+@app.post("/relations/{relation_id}/confirm")
+async def confirm_relation(
+    relation_id: str,
+    claims: Annotated[SessionClaims, Depends(_require_session)],
+) -> JSONResponse:
+    key = (claims.email, relation_id)
+    confirmer_record = _relations_store.get(key)
+    if confirmer_record is None or confirmer_record.direction != "received" or confirmer_record.status != "pending":
+        return JSONResponse({"error": "relation not found or cannot be confirmed"}, status_code=409)
+
+    peer_key = (confirmer_record.peer_email, relation_id)
+    peer_record = _relations_store.get(peer_key)
+    if peer_record is None:
+        return JSONResponse({"error": "peer relation not found"}, status_code=409)
+
+    from relations.domain import build_confirmed_records  # noqa: PLC0415
+
+    confirmed_sent, confirmed_received = build_confirmed_records(peer_record, confirmer_record)
+    _relations_store[(confirmed_sent.owner_email, confirmed_sent.relation_id)] = confirmed_sent
+    _relations_store[(confirmed_received.owner_email, confirmed_received.relation_id)] = confirmed_received
+    return JSONResponse(asdict(confirmed_received))
+
+
+@app.delete("/relations/{relation_id}")
+async def delete_relation(
+    relation_id: str,
+    claims: Annotated[SessionClaims, Depends(_require_session)],
+) -> Response:
+    key = (claims.email, relation_id)
+    owner_record = _relations_store.get(key)
+    if owner_record is None:
+        return JSONResponse({"error": "relation not found"}, status_code=409)
+
+    peer_key = (owner_record.peer_email, relation_id)
+    _relations_store.pop(key, None)
+    _relations_store.pop(peer_key, None)
+    return Response(status_code=204)
+
+
+@app.post("/test/seed-relation")
+async def seed_relation(request: Request) -> JSONResponse:
+    body: dict[str, Any] = await request.json()
+    peer_email = str(body["peer_email"])
+    label = normalise_label(str(body["label"]))
+    relation_id = str(uuid.uuid4())
+    created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    received = RelationRecord(
+        relation_id=relation_id,
+        owner_email=DEV_EMAIL,
+        peer_email=peer_email,
+        label=label,
+        status="pending",
+        direction="received",
+        created_at=created_at,
+    )
+    sent = RelationRecord(
+        relation_id=relation_id,
+        owner_email=peer_email,
+        peer_email=DEV_EMAIL,
+        label=label,
+        status="pending",
+        direction="sent",
+        created_at=created_at,
+    )
+    _relations_store[(received.owner_email, received.relation_id)] = received
+    _relations_store[(sent.owner_email, sent.relation_id)] = sent
+    return JSONResponse({"relation_id": relation_id}, status_code=201)
+
+
+@app.get("/relations/labels")
+async def get_relation_labels(claims: Annotated[SessionClaims, Depends(_require_session)]) -> JSONResponse:
+    records = _list_relations(claims.email)
+    labels = sorted(known_labels(records))
+    return JSONResponse({"labels": labels})
 
 
 if __name__ == "__main__":

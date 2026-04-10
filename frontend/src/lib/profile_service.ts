@@ -9,13 +9,9 @@ export interface ProfileSnapshot {
   entries: ProfileEntry[]
 }
 
-const apiUrl = import.meta.env.VITE_API_URL as string
+import { assertOk } from './http_utils'
 
-async function assertOk(res: Response): Promise<void> {
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`)
-  }
-}
+const apiUrl = import.meta.env.VITE_API_URL as string
 
 export async function getProfile(sessionToken: string): Promise<ProfileSnapshot> {
   const res = await fetch(`${apiUrl}/profile`, {

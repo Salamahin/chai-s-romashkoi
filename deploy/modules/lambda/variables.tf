@@ -23,6 +23,11 @@ variable "profile_zip_path" {
   type        = string
 }
 
+variable "relations_zip_path" {
+  description = "Path to relations handler Lambda zip (handles /relations routes)"
+  type        = string
+}
+
 variable "google_client_id" {
   description = "Google OAuth client ID passed to the auth Lambda as an environment variable"
   type        = string

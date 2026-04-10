@@ -17,7 +17,7 @@ their lifestyle such as food habits and working out sessions.
    VITE_API_URL=http://localhost:8000
    ```
 
-In local mode the Google OAuth flow is bypassed — a hardcoded `dev@local.dev` user is used instead. `GOOGLE_CLIENT_ID` is only required for production deployment.
+In local mode the Google OAuth flow is bypassed — a hardcoded `dev@local.dev` user is used instead. `GOOGLE_CLIENT_ID` is only required for production deployment. `VITE_RELATIONS_API_URL` is not required locally; the relations service falls back to `http://localhost:8000` automatically.
 
 ### Running
 
