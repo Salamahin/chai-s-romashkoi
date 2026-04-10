@@ -21,5 +21,6 @@ After every change:
 1. `uv run ruff check --fix src/`
 2. `uv run ruff format src/`
 3. `uv run mypy`
+4. `uv run pytest` (run the full test suite; fix any failures before returning)
 
 Fix all errors before returning. Never leave the codebase in a broken lint or type state.

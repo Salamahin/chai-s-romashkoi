@@ -41,3 +41,8 @@ variable "profile_zip_path" {
   description = "Path to profile handler Lambda zip"
   type        = string
 }
+
+variable "relations_zip_path" {
+  description = "Path to relations handler Lambda zip"
+  type        = string
+}

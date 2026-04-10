@@ -5,13 +5,16 @@
 #   - A CloudFront Origin Access Control so CloudFront can read the bucket
 #   - An S3 bucket policy granting read access to CloudFront only
 #   - S3 objects for every file under var.dist_path
-#   - A CloudFront distribution with four origins:
+#   - A CloudFront distribution with five origins:
 #       1. S3 bucket — static assets (default behaviour, caching enabled)
 #       2. auth Lambda Function URL  — routed for /auth/*
 #       3. app Lambda Function URL   — routed for /app/* (catch-all app routes)
 #       4. profile Lambda Function URL — routed for /profile and /profile/*
+#       5. relations Lambda Function URL — routed for /relations and /relations/*
 #   Cache behaviours are evaluated in declaration order; the default falls
 #   through to S3 for everything not matched by an ordered behaviour.
+#   - A local_file writing frontend/.env.production.local with VITE_RELATIONS_API_URL
+#     so vite build picks it up without committing secrets to the repo.
 #
 # Cost: CloudFront free tier covers 10M requests/month. S3 storage and
 # request costs are negligible for a small SPA. No hourly charges.
@@ -30,9 +33,10 @@ locals {
 
   # Strip "https://" prefix and trailing "/" to extract the bare hostname
   # required by CloudFront custom_origin_config domain_name.
-  auth_origin_domain    = replace(replace(var.auth_function_url, "https://", ""), "/", "")
-  app_origin_domain     = replace(replace(var.app_function_url, "https://", ""), "/", "")
-  profile_origin_domain = replace(replace(var.profile_function_url, "https://", ""), "/", "")
+  auth_origin_domain      = replace(replace(var.auth_function_url, "https://", ""), "/", "")
+  app_origin_domain       = replace(replace(var.app_function_url, "https://", ""), "/", "")
+  profile_origin_domain   = replace(replace(var.profile_function_url, "https://", ""), "/", "")
+  relations_origin_domain = replace(replace(var.relations_api_url, "https://", ""), "/", "")
 }
 
 # ---------------------------------------------------------------------------
@@ -90,6 +94,19 @@ resource "aws_s3_object" "assets" {
 }
 
 # ---------------------------------------------------------------------------
+# Build-time environment variable injection
+# ---------------------------------------------------------------------------
+
+# Write .env.production.local so `vite build` picks up VITE_RELATIONS_API_URL
+# without committing the value to the repository. The file is gitignored by
+# convention (.env*.local). It is regenerated on every `terraform apply`.
+resource "local_file" "frontend_env" {
+  filename        = "${path.module}/../../../frontend/.env.production.local"
+  content         = "VITE_RELATIONS_API_URL=${var.relations_api_url}\n"
+  file_permission = "0644"
+}
+
+# ---------------------------------------------------------------------------
 # CloudFront distribution
 # ---------------------------------------------------------------------------
 
@@ -138,6 +155,19 @@ resource "aws_cloudfront_distribution" "this" {
   origin {
     domain_name = local.profile_origin_domain
     origin_id   = "profile-handler"
+
+    custom_origin_config {
+      https_port             = 443
+      http_port              = 80
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Origin 5: relations Lambda Function URL
+  origin {
+    domain_name = local.relations_origin_domain
+    origin_id   = "relations-handler"
 
     custom_origin_config {
       https_port             = 443
@@ -200,6 +230,50 @@ resource "aws_cloudfront_distribution" "this" {
   ordered_cache_behavior {
     path_pattern     = "/profile/*"
     target_origin_id = "profile-handler"
+
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  # /relations (exact) → relations handler
+  ordered_cache_behavior {
+    path_pattern     = "/relations"
+    target_origin_id = "relations-handler"
+
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  # /relations/* → relations handler
+  ordered_cache_behavior {
+    path_pattern     = "/relations/*"
+    target_origin_id = "relations-handler"
 
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]

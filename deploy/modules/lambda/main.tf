@@ -2,11 +2,11 @@
 #
 # Creates:
 #   - A shared Lambda Layer containing common Python utilities (auth, etc.)
-#   - Three Lambda functions: auth_handler, app_handler, profile_handler
-#   - Three Lambda Function URLs (one per function), each with CORS configured
-#   - A DynamoDB table for user profiles
-#   - A single IAM execution role shared by all three Lambdas
-#   - An inline IAM policy granting DynamoDB access to the profile handler
+#   - Four Lambda functions: auth_handler, app_handler, profile_handler, relations_handler
+#   - Four Lambda Function URLs (one per function), each with CORS configured
+#   - A DynamoDB table for user profiles with a GSI for pending relations lookup
+#   - A single IAM execution role shared by all four Lambdas
+#   - An inline IAM policy granting DynamoDB access (table + GSI) to the handlers
 
 # ---------------------------------------------------------------------------
 # IAM
@@ -34,7 +34,7 @@ resource "aws_iam_role_policy_attachment" "basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Inline policy scoped to the profiles table only — least privilege.
+# Inline policy scoped to the profiles table and its GSI — least privilege.
 data "aws_iam_policy_document" "dynamodb_profiles" {
   statement {
     effect = "Allow"
@@ -44,8 +44,13 @@ data "aws_iam_policy_document" "dynamodb_profiles" {
       "dynamodb:UpdateItem",
       "dynamodb:DeleteItem",
       "dynamodb:Query",
+      "dynamodb:TransactWriteItems",
     ]
-    resources = [aws_dynamodb_table.profiles.arn]
+    resources = [
+      aws_dynamodb_table.profiles.arn,
+      # GSI ARN required for Query calls targeting PendingReceivedIndex.
+      "${aws_dynamodb_table.profiles.arn}/index/PendingReceivedIndex",
+    ]
   }
 }
 
@@ -73,6 +78,27 @@ resource "aws_dynamodb_table" "profiles" {
   attribute {
     name = "SK"
     type = "S"
+  }
+
+  # GSI attributes — DynamoDB requires every attribute used in an index to be
+  # declared here even if they are not part of the base table key schema.
+  attribute {
+    name = "owner_email"
+    type = "S"
+  }
+
+  attribute {
+    name = "status_direction"
+    type = "S"
+  }
+
+  # GSI used by the relations handler to look up pending received requests for
+  # a given owner without scanning the entire table.
+  global_secondary_index {
+    name            = "PendingReceivedIndex"
+    hash_key        = "owner_email"
+    range_key       = "status_direction"
+    projection_type = "KEYS_ONLY" # minimise read cost — callers re-fetch as needed
   }
 
   lifecycle {
@@ -129,7 +155,9 @@ resource "aws_lambda_function" "app_handler" {
 
   environment {
     variables = {
-      SESSION_SECRET = var.session_secret
+      SESSION_SECRET      = var.session_secret
+      # Required to call count_pending_received on the profiles table.
+      PROFILES_TABLE_NAME = aws_dynamodb_table.profiles.name
     }
   }
 }
@@ -142,6 +170,25 @@ resource "aws_lambda_function" "profile_handler" {
   filename         = var.profile_zip_path
   source_code_hash = filebase64sha256(var.profile_zip_path)
   memory_size      = 128
+
+  layers = [aws_lambda_layer_version.shared.arn]
+
+  environment {
+    variables = {
+      SESSION_SECRET      = var.session_secret
+      PROFILES_TABLE_NAME = aws_dynamodb_table.profiles.name
+    }
+  }
+}
+
+resource "aws_lambda_function" "relations_handler" {
+  function_name    = "${var.project_name}-relations"
+  role             = aws_iam_role.this.arn
+  handler          = "relations.handler.handler"
+  runtime          = "python3.12"
+  filename         = var.relations_zip_path
+  source_code_hash = filebase64sha256(var.relations_zip_path)
+  memory_size      = 128 # minimum — increase only with measured justification
 
   layers = [aws_lambda_layer_version.shared.arn]
 
@@ -194,4 +241,30 @@ resource "aws_lambda_function_url" "profile_handler" {
     allow_headers     = ["content-type", "authorization"]
     max_age           = 86400
   }
+}
+
+resource "aws_lambda_function_url" "relations_handler" {
+  function_name      = aws_lambda_function.relations_handler.function_name
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = false
+    allow_origins     = ["*"]
+    allow_methods     = ["GET", "POST", "DELETE"]
+    allow_headers     = ["content-type", "authorization"]
+    max_age           = 86400
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Lambda permissions — allow Function URL invoker (anonymous HTTP) to call
+# each function. Required when authorization_type = "NONE".
+# ---------------------------------------------------------------------------
+
+resource "aws_lambda_permission" "relations_handler_url_invoker" {
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.relations_handler.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
 }

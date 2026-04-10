@@ -17,3 +17,8 @@ output "profile_function_url" {
   description = "Direct Lambda Function URL for the profile handler"
   value       = module.lambda.profile_function_url
 }
+
+output "relations_function_url" {
+  description = "Direct Lambda Function URL for the relations handler"
+  value       = module.lambda.relations_function_url
+}

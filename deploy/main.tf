@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -13,14 +17,15 @@ provider "aws" {
 }
 
 module "lambda" {
-  source           = "./modules/lambda"
-  project_name     = var.project_name
-  layer_zip_path   = var.layer_zip_path
-  auth_zip_path    = var.auth_zip_path
-  app_zip_path     = var.app_zip_path
-  profile_zip_path = var.profile_zip_path
-  google_client_id = var.google_client_id
-  session_secret   = var.session_secret
+  source              = "./modules/lambda"
+  project_name        = var.project_name
+  layer_zip_path      = var.layer_zip_path
+  auth_zip_path       = var.auth_zip_path
+  app_zip_path        = var.app_zip_path
+  profile_zip_path    = var.profile_zip_path
+  relations_zip_path  = var.relations_zip_path
+  google_client_id    = var.google_client_id
+  session_secret      = var.session_secret
 }
 
 module "frontend" {
@@ -30,4 +35,5 @@ module "frontend" {
   auth_function_url    = module.lambda.auth_function_url
   app_function_url     = module.lambda.app_function_url
   profile_function_url = module.lambda.profile_function_url
+  relations_api_url    = module.lambda.relations_function_url
 }

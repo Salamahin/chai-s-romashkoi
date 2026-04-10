@@ -22,3 +22,8 @@ variable "profile_function_url" {
   description = "Lambda Function URL for the profile handler (https://...)"
   type        = string
 }
+
+variable "relations_api_url" {
+  description = "Lambda Function URL for the relations handler; exposed as VITE_RELATIONS_API_URL at build time"
+  type        = string
+}

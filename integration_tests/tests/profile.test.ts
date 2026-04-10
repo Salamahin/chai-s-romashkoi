@@ -5,6 +5,9 @@ async function login(page: Page): Promise<void> {
   const loginButton = page.getByRole('button', { name: 'Login as dev@local.dev' })
   await expect(loginButton).toBeVisible()
   await loginButton.click()
+  const profileButton = page.getByRole('button', { name: 'Profile' })
+  await expect(profileButton).toBeVisible()
+  await profileButton.click()
   await expect(page.getByRole('button', { name: 'Add entry' })).toBeVisible()
 }
 
@@ -32,7 +35,7 @@ test('empty state shows no entries and an Add entry button', async ({ page }) =>
 test('add and save an entry persists after round-trip', async ({ page }) => {
   await page.getByRole('button', { name: 'Add entry' }).click()
 
-  const tagInput = page.locator('input[placeholder="Tag"]').last()
+  const tagInput = page.getByPlaceholder('tag').last()
   await tagInput.fill('hobbies')
 
   const textarea = page.locator('textarea').last()
@@ -47,7 +50,7 @@ test('add and save an entry persists after round-trip', async ({ page }) => {
 test('delete an entry and save removes it', async ({ page }) => {
   await page.getByRole('button', { name: 'Add entry' }).click()
 
-  const tagInput = page.locator('input[placeholder="Tag"]').last()
+  const tagInput = page.getByPlaceholder('tag').last()
   await tagInput.fill('hobbies')
 
   const textarea = page.locator('textarea').last()
@@ -69,7 +72,7 @@ test('delete an entry and save removes it', async ({ page }) => {
 test('tag autocomplete shows known tags as suggestions', async ({ page }) => {
   await page.getByRole('button', { name: 'Add entry' }).click()
 
-  const tagInput = page.locator('input[placeholder="Tag"]').last()
+  const tagInput = page.getByPlaceholder('tag').last()
   await tagInput.focus()
 
   await expect(page.getByRole('button', { name: 'food_restrictions' })).toBeVisible()
