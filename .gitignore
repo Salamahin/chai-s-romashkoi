@@ -8,6 +8,8 @@ dist/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+integration_tests/node_modules/
+integration_tests/test-results/
 
 # Terraform
 deploy/.terraform/
@@ -19,8 +21,6 @@ deploy/*.tfplan
 # OS
 .DS_Store
 
-# Local env
-frontend/.env
-
 # Playwright
 .playwright-mcp
+.local.pid

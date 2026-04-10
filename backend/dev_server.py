@@ -1,54 +1,65 @@
-"""Thin HTTP wrapper around the Lambda handler for local development."""
+"""FastAPI dev server for local development."""
 
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import cast
-from urllib.parse import urlparse
+from __future__ import annotations
 
-from hello.handler import handler
+import os
+from dataclasses import asdict
+from datetime import UTC, datetime
+
+import uvicorn
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+load_dotenv()
+
+from app.handler import make_hello_response  # noqa: E402
+from auth import SessionClaims, VerificationError, sign_session_token, verify_session_token  # noqa: E402
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_headers=["*"],
+    allow_methods=["*"],
+)
 
 
-class LambdaHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        self._handle()
+def _now_utc() -> int:
+    return int(datetime.now(UTC).timestamp())
 
-    def do_POST(self) -> None:
-        self._handle()
 
-    def _handle(self) -> None:
-        parsed = urlparse(self.path)
-        length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(length).decode() if length else ""
+def _extract_bearer(request: Request) -> str:
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        raise VerificationError("Missing or invalid Authorization header")
+    return auth.removeprefix("Bearer ")
 
-        event: dict[str, object] = {
-            "httpMethod": self.command,
-            "path": parsed.path,
-            "queryStringParameters": dict(
-                p.split("=", 1) for p in parsed.query.split("&") if "=" in p
-            ),
-            "headers": dict(self.headers),
-            "body": body,
-        }
 
-        result = handler(event, None)
+@app.post("/auth/session")
+async def auth_session() -> JSONResponse:
+    session_secret = os.environ["SESSION_SECRET"]
+    session_ttl_seconds = int(os.environ.get("SESSION_TTL_SECONDS", "900"))
 
-        status = cast(int, result.get("statusCode", 200))
-        headers = cast(dict[str, str], result.get("headers", {}))
-        response_body = cast(str, result.get("body", ""))
+    now_utc = _now_utc()
+    claims = SessionClaims(sub="dev", email="dev@local.dev", exp=0)
+    token = sign_session_token(claims, session_secret, now_utc, session_ttl_seconds)
+    return JSONResponse({"session_token": token})
 
-        self.send_response(status)
-        for key, value in headers.items():
-            self.send_header(key, value)
-        encoded = response_body.encode()
-        self.send_header("Content-Length", str(len(encoded)))
-        self.end_headers()
-        self.wfile.write(encoded)
 
-    def log_message(self, fmt: str, *args: object) -> None:
-        print(f"[backend] {fmt % args}")
+@app.get("/")
+async def hello(request: Request) -> JSONResponse:
+    session_secret = os.environ["SESSION_SECRET"]
+    now_utc = _now_utc()
+    try:
+        token = _extract_bearer(request)
+        verify_session_token(token, session_secret, now_utc)
+    except VerificationError as e:
+        return JSONResponse({"error": str(e)}, status_code=401)
+    return JSONResponse(asdict(make_hello_response()))
 
 
 if __name__ == "__main__":
-    port = 8000
-    server = HTTPServer(("0.0.0.0", port), LambdaHandler)
-    print(f"[backend] listening on http://localhost:{port}")
-    server.serve_forever()
+    uvicorn.run("dev_server:app", host="0.0.0.0", port=8000, reload=True)
