@@ -15,7 +15,7 @@
   )
 
   function addEntry(): void {
-    const newEntry: ProfileEntry = { id: crypto.randomUUID(), tag: '', text: '' }
+    const newEntry: ProfileEntry = { id: crypto.randomUUID(), tag: '', text: '', updated_at: new Date().toISOString() }
     onchange([...entries, newEntry])
   }
 

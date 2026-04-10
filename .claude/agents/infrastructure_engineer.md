@@ -15,9 +15,13 @@ You are a senior infrastructure engineer working on this project. Your job is to
 
 ## Architecture context
 
-- Backend: Python Lambda function, packaged as `backend/dist/function.zip`
-- Frontend: Static Svelte build, served from `frontend/dist`
-- The frontend module exposes a `lambda_invoke_arn` input for connecting API Gateway or Function URL to the Lambda.
+- Backend: multiple Python Lambdas (auth, app, profile), each packaged separately; shared code in a Lambda Layer
+- Frontend: Static Svelte build, served from S3 via CloudFront
+- CloudFront routes path prefixes to the appropriate Lambda Function URL; also serves S3 static assets as the default origin
+
+For the full Lambda layout, CloudFront routing table, and how to add a new Lambda see:
+- `.claude/skills/lambda-developer/references/architecture.md`
+- `.claude/skills/lambda-developer/references/adding-a-lambda.md`
 
 ## Coding standards
 

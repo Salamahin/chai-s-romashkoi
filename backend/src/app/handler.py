@@ -7,6 +7,8 @@ from typing import cast
 from auth import VerificationError
 from session_guard import CORS_HEADERS, require_session
 
+_SECRET = os.environ["SESSION_SECRET"]
+
 
 @dataclass(frozen=True)
 class HelloResponse:
@@ -24,11 +26,10 @@ def handler(event: dict[str, object], context: object) -> dict[str, object]:
     raw_path = str(event.get("rawPath", ""))
 
     if method == "GET" and raw_path == "/":
-        secret = os.environ["SESSION_SECRET"]
         now_utc = int(datetime.now(UTC).timestamp())
         raw_headers = cast(dict[str, str], event.get("headers") or {})
         try:
-            require_session(raw_headers, secret, now_utc)
+            require_session(raw_headers, _SECRET, now_utc)
         except VerificationError as e:
             return {"statusCode": 401, "headers": CORS_HEADERS, "body": json.dumps({"error": str(e)})}
         response = make_hello_response()

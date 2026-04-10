@@ -3,6 +3,8 @@ from __future__ import annotations
 from profile.domain import Profile, ProfileEntry, ProfilePatch
 from typing import Any
 
+from boto3.dynamodb.conditions import Key
+
 
 class ProfileRepository:
     def __init__(self, table: Any) -> None:  # boto3 DynamoDB Table resource
@@ -11,8 +13,7 @@ class ProfileRepository:
     def get(self, user_sub: str) -> Profile:
         pk = f"USER#{user_sub}"
         response = self._table.query(
-            KeyConditionExpression="PK = :pk AND begins_with(SK, :prefix)",
-            ExpressionAttributeValues={":pk": pk, ":prefix": "ENTRY#"},
+            KeyConditionExpression=Key("PK").eq(pk) & Key("SK").begins_with("ENTRY#"),
         )
         items: list[dict[str, str]] = response.get("Items", [])
         entries = tuple(
