@@ -13,9 +13,11 @@ provider "aws" {
 }
 
 module "lambda" {
-  source       = "./modules/lambda"
-  project_name = var.project_name
-  zip_path     = "${path.module}/../backend/dist/function.zip"
+  source           = "./modules/lambda"
+  project_name     = var.project_name
+  zip_path         = "${path.module}/../backend/dist/function.zip"
+  google_client_id = var.google_client_id
+  session_secret   = var.session_secret
 }
 
 module "frontend" {

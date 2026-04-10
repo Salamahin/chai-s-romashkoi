@@ -22,10 +22,19 @@ resource "aws_iam_role_policy_attachment" "basic" {
 resource "aws_lambda_function" "this" {
   function_name    = var.project_name
   role             = aws_iam_role.this.arn
-  handler          = "hello.handler.handler"
+  handler          = "app.dispatcher.handler"
   runtime          = "python3.12"
   filename         = var.zip_path
   source_code_hash = filebase64sha256(var.zip_path)
+
+  environment {
+    variables = {
+      GOOGLE_CLIENT_ID    = var.google_client_id
+      SESSION_SECRET      = var.session_secret
+      JWKS_URL            = var.jwks_url
+      SESSION_TTL_SECONDS = tostring(var.session_ttl_seconds)
+    }
+  }
 }
 
 resource "aws_lambda_function_url" "this" {
@@ -35,8 +44,8 @@ resource "aws_lambda_function_url" "this" {
   cors {
     allow_credentials = false
     allow_origins     = ["*"]
-    allow_methods     = ["GET"]
-    allow_headers     = ["content-type"]
+    allow_methods     = ["GET", "POST"]
+    allow_headers     = ["content-type", "authorization"]
     max_age           = 86400
   }
 }
