@@ -14,7 +14,7 @@ trap cleanup EXIT
 
 echo "==> Starting backend on http://localhost:8000"
 cd "$REPO_ROOT/backend"
-uv run python dev_server.py &
+uv run python -m dev.server &
 BACKEND_PID=$!
 
 echo "==> Waiting for backend..."
