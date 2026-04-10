@@ -45,6 +45,7 @@ _relations_store: dict[tuple[str, str], RelationRecord] = {}
 DEV_SUB = "dev"
 DEV_EMAIL = "dev@local.dev"
 
+
 # Seed: one pending-received and one confirmed relation for dev@local.dev on startup
 def _seed_relations() -> None:
     _pending_id = "00000000-0000-0000-0000-000000000001"
@@ -240,7 +241,7 @@ async def confirm_relation(
 async def delete_relation(
     relation_id: str,
     claims: Annotated[SessionClaims, Depends(_require_session)],
-) -> JSONResponse:
+) -> Response:
     key = (claims.email, relation_id)
     owner_record = _relations_store.get(key)
     if owner_record is None:

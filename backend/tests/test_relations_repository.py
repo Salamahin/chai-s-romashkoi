@@ -115,3 +115,22 @@ def test_count_pending_received_is_zero_after_confirm(table) -> None:
     repo.confirm_pair(RECIPIENT, RELATION_ID)
 
     assert repo.count_pending_received(RECIPIENT) == 0
+
+
+def test_put_pair_raises_on_duplicate_relation_id(table) -> None:
+    repo = RelationRepository(table)
+    sender_copy, recipient_copy = _make_pair()
+    repo.put_pair(sender_copy, recipient_copy)
+
+    with pytest.raises(ValueError, match="already exists"):
+        repo.put_pair(sender_copy, recipient_copy)
+
+
+def test_confirm_pair_raises_on_already_confirmed(table) -> None:
+    repo = RelationRepository(table)
+    sender_copy, recipient_copy = _make_pair()
+    repo.put_pair(sender_copy, recipient_copy)
+    repo.confirm_pair(RECIPIENT, RELATION_ID)
+
+    with pytest.raises(ValueError):
+        repo.confirm_pair(RECIPIENT, RELATION_ID)

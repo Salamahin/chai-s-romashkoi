@@ -16,10 +16,10 @@ from relations.repository import RelationRepository
 from session_guard import CORS_HEADERS, require_session
 
 _SESSION_SECRET = os.environ["SESSION_SECRET"]
-_RELATIONS_TABLE_NAME = os.environ["RELATIONS_TABLE_NAME"]
+_PROFILES_TABLE_NAME = os.environ["PROFILES_TABLE_NAME"]
 
 _dynamodb = boto3.resource("dynamodb")
-_table = _dynamodb.Table(_RELATIONS_TABLE_NAME)
+_table = _dynamodb.Table(_PROFILES_TABLE_NAME)
 _repo = RelationRepository(_table)
 
 
@@ -69,7 +69,10 @@ def handler(event: dict[str, object], context: object) -> dict[str, object]:
         except ValueError as e:
             return {"statusCode": 400, "headers": CORS_HEADERS, "body": json.dumps({"error": str(e)})}
 
-        _repo.put_pair(sender_copy, recipient_copy)
+        try:
+            _repo.put_pair(sender_copy, recipient_copy)
+        except ValueError as e:
+            return {"statusCode": 409, "headers": CORS_HEADERS, "body": json.dumps({"error": str(e)})}
         return {"statusCode": 201, "headers": CORS_HEADERS, "body": json.dumps(asdict(sender_copy))}
 
     if method == "GET" and raw_path == "/relations/labels":

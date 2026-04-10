@@ -10,10 +10,10 @@ from relations.repository import RelationRepository
 from session_guard import CORS_HEADERS, require_session
 
 _SECRET = os.environ["SESSION_SECRET"]
-_RELATIONS_TABLE_NAME = os.environ["RELATIONS_TABLE_NAME"]
+_PROFILES_TABLE_NAME = os.environ["PROFILES_TABLE_NAME"]
 
 _dynamodb = boto3.resource("dynamodb")
-_relations_table = _dynamodb.Table(_RELATIONS_TABLE_NAME)
+_relations_table = _dynamodb.Table(_PROFILES_TABLE_NAME)
 _relations_repo = RelationRepository(_relations_table)
 
 

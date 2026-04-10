@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal, cast
 
 import boto3
+import botocore.exceptions
 from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.types import TypeSerializer
 
@@ -65,22 +66,30 @@ class RelationRepository:
         return tuple(sorted(records, key=lambda r: r.created_at))
 
     def put_pair(self, sender_copy: RelationRecord, recipient_copy: RelationRecord) -> None:
-        self._client.transact_write_items(
-            TransactItems=[
-                {
-                    "Put": {
-                        "TableName": self._table.name,
-                        "Item": _serialize(_record_to_raw(sender_copy)),
-                    }
-                },
-                {
-                    "Put": {
-                        "TableName": self._table.name,
-                        "Item": _serialize(_record_to_raw(recipient_copy)),
-                    }
-                },
-            ]
-        )
+        try:
+            self._client.transact_write_items(
+                TransactItems=[
+                    {
+                        "Put": {
+                            "TableName": self._table.name,
+                            "Item": _serialize(_record_to_raw(sender_copy)),
+                            # Prevent overwriting an existing relation with the same id.
+                            "ConditionExpression": "attribute_not_exists(PK)",
+                        }
+                    },
+                    {
+                        "Put": {
+                            "TableName": self._table.name,
+                            "Item": _serialize(_record_to_raw(recipient_copy)),
+                            "ConditionExpression": "attribute_not_exists(PK)",
+                        }
+                    },
+                ]
+            )
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "TransactionCanceledException":
+                raise ValueError("Relation already exists") from e
+            raise
 
     def confirm_pair(self, confirmer_email: str, relation_id: str) -> RelationRecord:
         pk = f"{_PK_PREFIX}{confirmer_email}"
@@ -102,22 +111,32 @@ class RelationRepository:
 
         confirmed_sent, confirmed_received = build_confirmed_records(peer_record, confirmer_record)
 
-        self._client.transact_write_items(
-            TransactItems=[
-                {
-                    "Put": {
-                        "TableName": self._table.name,
-                        "Item": _serialize(_record_to_raw(confirmed_sent)),
-                    }
-                },
-                {
-                    "Put": {
-                        "TableName": self._table.name,
-                        "Item": _serialize(_record_to_raw(confirmed_received)),
-                    }
-                },
-            ]
-        )
+        try:
+            self._client.transact_write_items(
+                TransactItems=[
+                    {
+                        "Put": {
+                            "TableName": self._table.name,
+                            "Item": _serialize(_record_to_raw(confirmed_sent)),
+                        }
+                    },
+                    {
+                        # Guard against concurrent confirms: only write if the
+                        # confirmer's record is still pending#received.
+                        "Put": {
+                            "TableName": self._table.name,
+                            "Item": _serialize(_record_to_raw(confirmed_received)),
+                            "ConditionExpression": "#sd = :pr",
+                            "ExpressionAttributeNames": {"#sd": "status_direction"},
+                            "ExpressionAttributeValues": {":pr": {"S": "pending#received"}},
+                        }
+                    },
+                ]
+            )
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "TransactionCanceledException":
+                raise ValueError("Relation is no longer pending") from e
+            raise
         return confirmed_received
 
     def delete_pair(self, owner_email: str, relation_id: str) -> None:
