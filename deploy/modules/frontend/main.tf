@@ -1,3 +1,21 @@
+# Frontend module
+#
+# Creates:
+#   - An S3 bucket (private) for static frontend assets
+#   - A CloudFront Origin Access Control so CloudFront can read the bucket
+#   - An S3 bucket policy granting read access to CloudFront only
+#   - S3 objects for every file under var.dist_path
+#   - A CloudFront distribution with four origins:
+#       1. S3 bucket — static assets (default behaviour, caching enabled)
+#       2. auth Lambda Function URL  — routed for /auth/*
+#       3. app Lambda Function URL   — routed for /app/* (catch-all app routes)
+#       4. profile Lambda Function URL — routed for /profile and /profile/*
+#   Cache behaviours are evaluated in declaration order; the default falls
+#   through to S3 for everything not matched by an ordered behaviour.
+#
+# Cost: CloudFront free tier covers 10M requests/month. S3 storage and
+# request costs are negligible for a small SPA. No hourly charges.
+
 locals {
   mime_types = {
     ".html"  = "text/html"
@@ -9,12 +27,23 @@ locals {
     ".png"   = "image/png"
     ".woff2" = "font/woff2"
   }
+
+  # Strip "https://" prefix and trailing "/" to extract the bare hostname
+  # required by CloudFront custom_origin_config domain_name.
+  auth_origin_domain    = replace(replace(var.auth_function_url, "https://", ""), "/", "")
+  app_origin_domain     = replace(replace(var.app_function_url, "https://", ""), "/", "")
+  profile_origin_domain = replace(replace(var.profile_function_url, "https://", ""), "/", "")
 }
+
+# ---------------------------------------------------------------------------
+# S3 bucket for static assets
+# ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "this" {
   bucket = "${var.project_name}-frontend"
 }
 
+# Block all public access — objects are served exclusively through CloudFront.
 resource "aws_s3_bucket_public_access_block" "this" {
   bucket                  = aws_s3_bucket.this.id
   block_public_acls       = true
@@ -60,16 +89,138 @@ resource "aws_s3_object" "assets" {
   etag         = filemd5("${var.dist_path}/${each.value}")
 }
 
+# ---------------------------------------------------------------------------
+# CloudFront distribution
+# ---------------------------------------------------------------------------
+
 resource "aws_cloudfront_distribution" "this" {
   enabled             = true
   default_root_object = "index.html"
-  price_class         = "PriceClass_100"
+  # PriceClass_100 restricts edge locations to North America + Europe,
+  # keeping costs minimal while covering the expected audience.
+  price_class = "PriceClass_100"
 
+  # Origin 1: S3 static assets
   origin {
     domain_name              = aws_s3_bucket.this.bucket_regional_domain_name
     origin_id                = "s3-frontend"
     origin_access_control_id = aws_cloudfront_origin_access_control.this.id
   }
+
+  # Origin 2: auth Lambda Function URL
+  origin {
+    domain_name = local.auth_origin_domain
+    origin_id   = "auth-handler"
+
+    # Lambda Function URLs are HTTPS-only; no OAC — Lambda authorizes via NONE.
+    custom_origin_config {
+      https_port             = 443
+      http_port              = 80
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Origin 3: app Lambda Function URL
+  origin {
+    domain_name = local.app_origin_domain
+    origin_id   = "app-handler"
+
+    custom_origin_config {
+      https_port             = 443
+      http_port              = 80
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Origin 4: profile Lambda Function URL
+  origin {
+    domain_name = local.profile_origin_domain
+    origin_id   = "profile-handler"
+
+    custom_origin_config {
+      https_port             = 443
+      http_port              = 80
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Ordered cache behaviours (evaluated before the default behaviour)
+  # ---------------------------------------------------------------------------
+
+  # /auth/* → auth handler — caching disabled so every request reaches Lambda
+  ordered_cache_behavior {
+    path_pattern     = "/auth/*"
+    target_origin_id = "auth-handler"
+
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+
+    # TTL 0 effectively disables caching — required for auth endpoints.
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"] # forward all headers so auth tokens reach Lambda
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  # /profile (exact) → profile handler
+  ordered_cache_behavior {
+    path_pattern     = "/profile"
+    target_origin_id = "profile-handler"
+
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  # /profile/* → profile handler
+  ordered_cache_behavior {
+    path_pattern     = "/profile/*"
+    target_origin_id = "profile-handler"
+
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Default behaviour — S3 static assets with caching enabled
+  # ---------------------------------------------------------------------------
 
   default_cache_behavior {
     target_origin_id       = "s3-frontend"
@@ -85,6 +236,7 @@ resource "aws_cloudfront_distribution" "this" {
     }
   }
 
+  # Return index.html for unknown paths so the SPA router handles them.
   custom_error_response {
     error_code         = 404
     response_code      = 200

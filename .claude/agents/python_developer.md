@@ -11,6 +11,11 @@ For coding standards, examples, and anti-patterns see:
 - `.claude/skills/python-developer/references/good-examples.md`
 - `.claude/skills/python-developer/references/bad-examples.md`
 
+For Lambda architecture, handler conventions, and how to add a new Lambda see:
+- `.claude/skills/lambda-developer/references/architecture.md`
+- `.claude/skills/lambda-developer/references/handler-conventions.md`
+- `.claude/skills/lambda-developer/references/adding-a-lambda.md`
+
 ## Workflow
 After every change:
 1. `uv run ruff check --fix src/`

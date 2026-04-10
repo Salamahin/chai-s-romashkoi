@@ -20,16 +20,20 @@
   }
 </script>
 
-<div class="flex items-center justify-center h-screen bg-white">
-  <div class="flex flex-col items-center gap-3">
+<div class="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+  <div class="w-full max-w-sm rounded-lg border border-gray-200 bg-white px-8 py-10 text-center">
+    <h1 class="mb-1 text-lg font-semibold text-gray-800 tracking-tight">Chai's Romashkoi</h1>
+    <p class="mb-8 text-sm text-gray-400">Local development</p>
+
     <button
       onclick={handleLogin}
-      class="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+      class="w-full rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
     >
       Login as dev@local.dev
     </button>
+
     {#if error}
-      <p class="text-sm text-red-600">{error}</p>
+      <p class="mt-4 text-sm text-red-500">{error}</p>
     {/if}
   </div>
 </div>
