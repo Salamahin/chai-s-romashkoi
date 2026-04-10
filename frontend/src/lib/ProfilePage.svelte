@@ -23,11 +23,11 @@
   let saveSuccess = $state(false)
 
   function toUiEntry(e: ApiEntry): ProfileEntry {
-    return { id: e.entry_id, tag: e.tag, text: e.text }
+    return { id: e.entry_id, tag: e.tag, text: e.text, updated_at: e.updated_at }
   }
 
   function toApiEntry(e: ProfileEntry): ApiEntry {
-    return { entry_id: e.id, tag: e.tag, text: e.text, updated_at: new Date().toISOString() }
+    return { entry_id: e.id, tag: e.tag, text: e.text, updated_at: e.updated_at }
   }
 
   onMount(async () => {

@@ -163,6 +163,61 @@ def test_discount():
     assert pick_discount(entropy) == 20
 ```
 
+## DynamoDB repository tests with moto
+
+Use `moto` to spin up an in-process fake DynamoDB. No `MagicMock`, no patching — treat the fake as the real service. Moto validates the actual DynamoDB API contract (key schemas, expression syntax, attribute types), so bugs like wrong `KeyConditionExpression` syntax are caught at test time rather than in prod.
+
+The table fixture uses `mock_aws()` as a context manager with `yield` so the mock stays active for the entire test:
+
+```python
+import boto3
+import pytest
+from moto import mock_aws
+from profile.repository import ProfileRepository
+from profile.domain import Profile, ProfileEntry, ProfilePatch
+
+TABLE_NAME = "profiles"
+
+
+@pytest.fixture
+def table():
+    with mock_aws():
+        dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
+        t = dynamodb.create_table(
+            TableName=TABLE_NAME,
+            KeySchema=[
+                {"AttributeName": "PK", "KeyType": "HASH"},
+                {"AttributeName": "SK", "KeyType": "RANGE"},
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "PK", "AttributeType": "S"},
+                {"AttributeName": "SK", "AttributeType": "S"},
+            ],
+            BillingMode="PAY_PER_REQUEST",
+        )
+        yield t
+
+
+def test_get_returns_empty_profile_for_new_user(table):
+    assert ProfileRepository(table).get("u1") == Profile(user_sub="u1", entries=())
+```
+
+**Key conditions to test:**
+- Empty profile for a new user.
+- Upsert + get round-trip (verifies write then read).
+- Entries come back sorted by SK (ULID order), regardless of insertion order.
+- Upsert overwrites an existing entry.
+- Delete removes exactly one entry; deleting a nonexistent ID is a no-op.
+- Users are isolated (different PKs don't bleed into each other).
+
+**pytest config** — add to `pyproject.toml` so `from profile.domain import ...` resolves to `src/profile/` before the stdlib `profile` module:
+
+```toml
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+```
+
 ---
 
 ## Pragmatic rule-bending

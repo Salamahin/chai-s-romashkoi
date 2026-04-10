@@ -18,7 +18,10 @@
 
   function handleInput(e: Event): void {
     const target = e.currentTarget as HTMLInputElement
-    onchange(target.value)
+    const normalised = target.value.toLowerCase().trim()
+    if (normalised !== value) {
+      onchange(normalised)
+    }
     showSuggestions = true
   }
 

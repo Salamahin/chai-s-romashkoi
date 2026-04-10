@@ -5,6 +5,7 @@
     id: string
     tag: string
     text: string
+    updated_at: string
   }
 
   interface Props {
@@ -17,12 +18,12 @@
   const { entry, tagSuggestions, onchange, ondelete }: Props = $props()
 
   function handleTagChange(tag: string): void {
-    onchange({ ...entry, tag })
+    onchange({ ...entry, tag, updated_at: new Date().toISOString() })
   }
 
   function handleTextInput(e: Event): void {
     const text = (e.currentTarget as HTMLTextAreaElement).value
-    onchange({ ...entry, text })
+    onchange({ ...entry, text, updated_at: new Date().toISOString() })
   }
 </script>
 
