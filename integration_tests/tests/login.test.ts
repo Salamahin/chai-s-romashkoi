@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('dev login flow shows app message', async ({ page }) => {
+test('dev login flow loads the profile page', async ({ page }) => {
   await page.goto('/')
 
   const loginButton = page.getByRole('button', { name: 'Login as dev@local.dev' })
@@ -8,5 +8,5 @@ test('dev login flow shows app message', async ({ page }) => {
 
   await loginButton.click()
 
-  await expect(page.getByText('hello from chai-s-romashkoi')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add entry' })).toBeVisible()
 })

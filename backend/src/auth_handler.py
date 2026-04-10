@@ -6,12 +6,7 @@ from datetime import UTC, datetime
 from typing import cast
 
 from auth import SessionClaims, VerificationError, fetch_jwks, sign_session_token, verify_google_id_token
-
-CORS_HEADERS = {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "content-type,authorization",
-}
+from session_guard import CORS_HEADERS
 
 
 def handler(event: dict[str, object], context: object) -> dict[str, object]:

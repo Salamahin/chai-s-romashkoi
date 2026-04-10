@@ -1,13 +1,30 @@
 variable "project_name" {
-  type = string
+  description = "Project name used as a prefix for all resource names"
+  type        = string
 }
 
-variable "zip_path" {
-  type = string
+variable "layer_zip_path" {
+  description = "Path to shared layer zip containing common Python dependencies and auth utilities"
+  type        = string
+}
+
+variable "auth_zip_path" {
+  description = "Path to auth handler Lambda zip (handles POST /auth/session)"
+  type        = string
+}
+
+variable "app_zip_path" {
+  description = "Path to app handler Lambda zip (handles general app routes)"
+  type        = string
+}
+
+variable "profile_zip_path" {
+  description = "Path to profile handler Lambda zip (handles /profile routes)"
+  type        = string
 }
 
 variable "google_client_id" {
-  description = "Google OAuth client ID passed to the Lambda as an environment variable"
+  description = "Google OAuth client ID passed to the auth Lambda as an environment variable"
   type        = string
   sensitive   = true
 }

@@ -16,6 +16,8 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "boto3>=1.38.0",
+    "boto3-stubs[dynamodb]>=1.38.0",
     "fastapi>=0.115.0",
     "mypy>=1.20.0",
     "python-dotenv>=1.2.2",
@@ -25,7 +27,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/app", "src/auth.py", "src/auth_handler.py"]
+packages = ["src/app", "src/auth.py", "src/auth_handler.py", "src/profile", "src/dev", "src/session_guard.py"]
 
 [tool.ruff]
 src = ["src"]

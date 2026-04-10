@@ -15,14 +15,19 @@ provider "aws" {
 module "lambda" {
   source           = "./modules/lambda"
   project_name     = var.project_name
-  zip_path         = "${path.module}/../backend/dist/function.zip"
+  layer_zip_path   = var.layer_zip_path
+  auth_zip_path    = var.auth_zip_path
+  app_zip_path     = var.app_zip_path
+  profile_zip_path = var.profile_zip_path
   google_client_id = var.google_client_id
   session_secret   = var.session_secret
 }
 
 module "frontend" {
-  source            = "./modules/frontend"
-  project_name      = var.project_name
-  dist_path         = "${path.module}/../frontend/dist"
-  lambda_invoke_arn = module.lambda.function_arn
+  source               = "./modules/frontend"
+  project_name         = var.project_name
+  dist_path            = "${path.module}/../frontend/dist"
+  auth_function_url    = module.lambda.auth_function_url
+  app_function_url     = module.lambda.app_function_url
+  profile_function_url = module.lambda.profile_function_url
 }
