@@ -161,6 +161,57 @@ test('edit and delete buttons only appear for saved messages on hover', async ({
   await expect(page.getByRole('button', { name: 'Delete' })).toBeVisible()
 })
 
+test('failed send shows failed state and retry delivers the message', async ({ page }) => {
+  // Intercept POST /log to simulate a server error
+  await page.route('**/log', (route) => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ status: 500, body: JSON.stringify({ error: 'server error' }) })
+    } else {
+      route.continue()
+    }
+  })
+
+  await page.locator('textarea').first().fill('Message that will fail')
+  await page.getByRole('button', { name: 'Send' }).click()
+
+  await expect(page.getByText('Message that will fail')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible()
+
+  // Allow the retry to reach the server
+  await page.unroute('**/log')
+
+  await page.getByRole('button', { name: 'Retry' }).click()
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByRole('button', { name: 'Retry' })).not.toBeVisible()
+  await expect(page.getByText('Message that will fail')).toBeVisible()
+})
+
+test('scrolling to top loads entries from the previous week', async ({ page }) => {
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+  await fetch(`${BACKEND}/test/seed-log-entry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: 'Old entry from last week', logged_at: eightDaysAgo }),
+  })
+
+  // Send a current-week message so the list has content and isn't already scrolled to top
+  await sendMessage(page, 'Current week message')
+
+  // Old entry is outside the initial 7-day window
+  await expect(page.getByText('Old entry from last week')).not.toBeVisible()
+
+  // Scroll the message list to the top to trigger load-previous
+  const listEl = page.locator('.overflow-y-auto').first()
+  await listEl.evaluate((el) => {
+    el.scrollTop = 0
+    el.dispatchEvent(new Event('scroll'))
+  })
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByText('Old entry from last week')).toBeVisible()
+})
+
 test('pending badge count shows in chat header when a relation is pending', async ({ page }) => {
   await fetch('http://localhost:8000/test/seed-relation', {
     method: 'POST',

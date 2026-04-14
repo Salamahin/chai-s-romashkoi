@@ -358,5 +358,16 @@ async def clear_log() -> Response:
     return Response(status_code=204)
 
 
+@app.post("/test/seed-log-entry")
+async def seed_log_entry(request: Request) -> JSONResponse:
+    body: dict[str, Any] = await request.json()
+    entry_id = str(uuid.uuid4())
+    logged_at = str(body.get("logged_at", datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")))
+    text = str(body.get("text", "seeded entry"))
+    entry = make_entry(entry_id, DEV_EMAIL, text, logged_at)
+    _log_store[(DEV_EMAIL, entry_id)] = entry
+    return JSONResponse(to_response_dict(entry), status_code=201)
+
+
 if __name__ == "__main__":
     uvicorn.run("dev.server:app", host="0.0.0.0", port=8000, reload=True)
