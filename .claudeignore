@@ -17,5 +17,12 @@ deploy/*.tfplan
 # Claude agent worktrees
 .claude/worktrees/
 
+# Lock files
+uv.lock
+frontend/package-lock.json
+frontend/yarn.lock
+integration_tests/package-lock.json
+integration_tests/yarn.lock
+
 # OS
 .DS_Store
