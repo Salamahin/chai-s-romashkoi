@@ -24,6 +24,7 @@ module "lambda" {
   app_zip_path        = var.app_zip_path
   profile_zip_path    = var.profile_zip_path
   relations_zip_path  = var.relations_zip_path
+  log_zip_path        = var.log_zip_path
   google_client_id    = var.google_client_id
   session_secret      = var.session_secret
 }
@@ -36,4 +37,5 @@ module "frontend" {
   app_function_url     = module.lambda.app_function_url
   profile_function_url = module.lambda.profile_function_url
   relations_api_url    = module.lambda.relations_function_url
+  log_api_url          = module.lambda.log_function_url
 }

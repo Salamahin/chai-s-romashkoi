@@ -46,3 +46,8 @@ variable "relations_zip_path" {
   description = "Path to relations handler Lambda zip"
   type        = string
 }
+
+variable "log_zip_path" {
+  description = "Path to log handler Lambda zip"
+  type        = string
+}

@@ -27,3 +27,8 @@ variable "relations_api_url" {
   description = "Lambda Function URL for the relations handler; exposed as VITE_RELATIONS_API_URL at build time"
   type        = string
 }
+
+variable "log_api_url" {
+  description = "Function URL for the log handler Lambda"
+  type        = string
+}

@@ -24,6 +24,7 @@ from profile.domain import Profile, ProfileEntry, apply_patch, compute_patch, no
 from profile.tags import STANDARD_TAGS, known_tags  # noqa: E402
 
 from auth import SessionClaims, VerificationError, sign_session_token, verify_session_token  # noqa: E402
+from log.domain import LogEntry, LogEntryPatch, apply_patch, make_entry, to_response_dict  # noqa: E402
 from relations.domain import RelationRecord, build_send_records, normalise_label  # noqa: E402
 from relations.label_suggestions import known_labels  # noqa: E402
 
@@ -41,6 +42,9 @@ _profile_store: dict[str, Profile] = {}
 
 # In-memory store: (owner_email, relation_id) -> RelationRecord
 _relations_store: dict[tuple[str, str], RelationRecord] = {}
+
+# In-memory log store: (owner_email, entry_id) -> LogEntry
+_log_store: dict[tuple[str, str], LogEntry] = {}
 
 DEV_SUB = "dev"
 DEV_EMAIL = "dev@local.dev"
@@ -288,6 +292,81 @@ async def get_relation_labels(claims: Annotated[SessionClaims, Depends(_require_
     records = _list_relations(claims.email)
     labels = sorted(known_labels(records))
     return JSONResponse({"labels": labels})
+
+
+@app.get("/log")
+async def get_log(request: Request, claims: Annotated[SessionClaims, Depends(_require_session)]) -> JSONResponse:
+    week_start = request.query_params.get("week_start", "")
+    week_end = request.query_params.get("week_end", "")
+    entries = [
+        e
+        for (email, _), e in _log_store.items()
+        if email == claims.email
+        and (not week_start or e.logged_at >= week_start)
+        and (not week_end or e.logged_at < week_end)
+    ]
+    entries_sorted = sorted(entries, key=lambda e: e.logged_at)
+    return JSONResponse({"entries": [to_response_dict(e) for e in entries_sorted]})
+
+
+@app.post("/log")
+async def post_log(request: Request, claims: Annotated[SessionClaims, Depends(_require_session)]) -> JSONResponse:
+    try:
+        body: dict[str, Any] = await request.json()
+        text = str(body["text"])
+    except (KeyError, ValueError):
+        return JSONResponse({"error": "invalid body"}, status_code=400)
+    entry_id = str(uuid.uuid4())
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    entry = make_entry(entry_id, claims.email, text, now)
+    _log_store[(claims.email, entry_id)] = entry
+    return JSONResponse(to_response_dict(entry), status_code=201)
+
+
+@app.put("/log/{entry_id}")
+async def put_log(
+    entry_id: str, request: Request, claims: Annotated[SessionClaims, Depends(_require_session)]
+) -> JSONResponse:
+    key = (claims.email, entry_id)
+    entry = _log_store.get(key)
+    if entry is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    try:
+        body: dict[str, Any] = await request.json()
+        text = str(body["text"])
+    except (KeyError, ValueError):
+        return JSONResponse({"error": "invalid body"}, status_code=400)
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    patch = LogEntryPatch(raw_text=text, updated_at=now)
+    updated = apply_patch(entry, patch)
+    _log_store[key] = updated
+    return JSONResponse(to_response_dict(updated))
+
+
+@app.delete("/log/{entry_id}")
+async def delete_log(entry_id: str, claims: Annotated[SessionClaims, Depends(_require_session)]) -> Response:
+    key = (claims.email, entry_id)
+    if key not in _log_store:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    del _log_store[key]
+    return Response(status_code=204)
+
+
+@app.post("/test/clear-log")
+async def clear_log() -> Response:
+    _log_store.clear()
+    return Response(status_code=204)
+
+
+@app.post("/test/seed-log-entry")
+async def seed_log_entry(request: Request) -> JSONResponse:
+    body: dict[str, Any] = await request.json()
+    entry_id = str(uuid.uuid4())
+    logged_at = str(body.get("logged_at", datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")))
+    text = str(body.get("text", "seeded entry"))
+    entry = make_entry(entry_id, DEV_EMAIL, text, logged_at)
+    _log_store[(DEV_EMAIL, entry_id)] = entry
+    return JSONResponse(to_response_dict(entry), status_code=201)
 
 
 if __name__ == "__main__":

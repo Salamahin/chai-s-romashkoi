@@ -6,6 +6,7 @@ from typing import cast
 
 import app.handler as app_handler
 import auth_handler
+import log.handler as log_handler
 import relations.handler as relations_handler
 from session_guard import CORS_HEADERS
 
@@ -34,6 +35,9 @@ def handler(event: dict[str, object], context: object) -> dict[str, object]:
 
     if raw_path == "/relations" or raw_path == "/relations/labels" or raw_path.startswith("/relations/"):
         return relations_handler.handler(event, context)
+
+    if raw_path == "/log" or raw_path.startswith("/log/"):
+        return log_handler.handler(event, context)
 
     return {
         "statusCode": 404,

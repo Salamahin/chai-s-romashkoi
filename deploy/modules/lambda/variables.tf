@@ -28,6 +28,11 @@ variable "relations_zip_path" {
   type        = string
 }
 
+variable "log_zip_path" {
+  description = "Path to log handler Lambda zip (handles /log routes)"
+  type        = string
+}
+
 variable "google_client_id" {
   description = "Google OAuth client ID passed to the auth Lambda as an environment variable"
   type        = string

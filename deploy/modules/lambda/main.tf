@@ -2,11 +2,11 @@
 #
 # Creates:
 #   - A shared Lambda Layer containing common Python utilities (auth, etc.)
-#   - Four Lambda functions: auth_handler, app_handler, profile_handler, relations_handler
-#   - Four Lambda Function URLs (one per function), each with CORS configured
-#   - A DynamoDB table for user profiles with a GSI for pending relations lookup
-#   - A single IAM execution role shared by all four Lambdas
-#   - An inline IAM policy granting DynamoDB access (table + GSI) to the handlers
+#   - Five Lambda functions: auth_handler, app_handler, profile_handler, relations_handler, log_handler
+#   - Five Lambda Function URLs (one per function), each with CORS configured
+#   - A DynamoDB table for user profiles with GSIs for pending relations and log entry lookup
+#   - A single IAM execution role shared by all five Lambdas
+#   - An inline IAM policy granting DynamoDB access (table + GSIs) to the handlers
 
 # ---------------------------------------------------------------------------
 # IAM
@@ -50,6 +50,8 @@ data "aws_iam_policy_document" "dynamodb_profiles" {
       aws_dynamodb_table.profiles.arn,
       # GSI ARN required for Query calls targeting PendingReceivedIndex.
       "${aws_dynamodb_table.profiles.arn}/index/PendingReceivedIndex",
+      # GSI ARN required for Query calls targeting LogEntryByIdIndex.
+      "${aws_dynamodb_table.profiles.arn}/index/LogEntryByIdIndex",
     ]
   }
 }
@@ -92,6 +94,11 @@ resource "aws_dynamodb_table" "profiles" {
     type = "S"
   }
 
+  attribute {
+    name = "entry_id"
+    type = "S"
+  }
+
   # GSI used by the relations handler to look up pending received requests for
   # a given owner without scanning the entire table.
   global_secondary_index {
@@ -99,6 +106,14 @@ resource "aws_dynamodb_table" "profiles" {
     hash_key        = "owner_email"
     range_key       = "status_direction"
     projection_type = "KEYS_ONLY" # minimise read cost — callers re-fetch as needed
+  }
+
+  # GSI used by the log handler to query log entries by owner and entry ID.
+  global_secondary_index {
+    name            = "LogEntryByIdIndex"
+    hash_key        = "owner_email"
+    range_key       = "entry_id"
+    projection_type = "ALL"
   }
 
   lifecycle {
@@ -256,6 +271,38 @@ resource "aws_lambda_function_url" "relations_handler" {
   }
 }
 
+resource "aws_lambda_function" "log_handler" {
+  function_name    = "${var.project_name}-log"
+  role             = aws_iam_role.this.arn
+  handler          = "log.handler.handler"
+  runtime          = "python3.12"
+  filename         = var.log_zip_path
+  source_code_hash = filebase64sha256(var.log_zip_path)
+  memory_size      = 128 # minimum — increase only with measured justification
+
+  layers = [aws_lambda_layer_version.shared.arn]
+
+  environment {
+    variables = {
+      SESSION_SECRET      = var.session_secret
+      PROFILES_TABLE_NAME = aws_dynamodb_table.profiles.name
+    }
+  }
+}
+
+resource "aws_lambda_function_url" "log_handler" {
+  function_name      = aws_lambda_function.log_handler.function_name
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = false
+    allow_origins     = ["*"]
+    allow_methods     = ["GET", "POST", "PUT", "DELETE"]
+    allow_headers     = ["content-type", "authorization"]
+    max_age           = 86400
+  }
+}
+
 # ---------------------------------------------------------------------------
 # Lambda permissions — allow Function URL invoker (anonymous HTTP) to call
 # each function. Required when authorization_type = "NONE".
@@ -265,6 +312,14 @@ resource "aws_lambda_permission" "relations_handler_url_invoker" {
   statement_id           = "FunctionURLAllowPublicAccess"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.relations_handler.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+resource "aws_lambda_permission" "log_handler_url_invoker" {
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.log_handler.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
 }
