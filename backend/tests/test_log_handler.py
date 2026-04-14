@@ -9,8 +9,8 @@ from unittest.mock import patch
 import pytest
 
 from auth import SessionClaims, sign_session_token
+from conftest import TABLE_NAME
 
-TABLE_NAME = "profiles"
 OWNER_EMAIL = "alice@example.com"
 SESSION_SECRET = "test-secret"
 
@@ -175,3 +175,22 @@ def test_get_log_only_returns_own_entries(patched_handler: tuple[Any, Any]) -> N
     body = json.loads(str(response["body"]))
     assert len(body["entries"]) == 1
     assert body["entries"][0]["entry_id"] == "own-e1"
+
+
+@pytest.mark.parametrize(
+    "method,body",
+    [
+        ("PUT", {"text": "hacked"}),
+        ("DELETE", None),
+    ],
+)
+def test_log_cannot_mutate_other_users_entry(
+    patched_handler: tuple[Any, Any], method: str, body: dict[str, Any] | None
+) -> None:
+    from log.domain import make_entry
+
+    log_handler, repo = patched_handler
+    repo.put(make_entry("other-e1", "other@example.com", "Private", "2026-04-11T10:00:00Z"))
+
+    response = log_handler.handler(_make_event(method, "/log/other-e1", body=body), None)
+    assert response["statusCode"] == 404

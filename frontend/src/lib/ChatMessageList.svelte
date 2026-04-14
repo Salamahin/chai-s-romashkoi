@@ -4,13 +4,14 @@
 
   interface Props {
     messages: ChatMessage[]
+    isLoadingMore: boolean
     onloadprevious: () => void
     onedit: (localId: string, newText: string) => void
     ondelete: (localId: string) => void
     onretry: (localId: string) => void
   }
 
-  const { messages, onloadprevious, onedit, ondelete, onretry }: Props = $props()
+  const { messages, isLoadingMore, onloadprevious, onedit, ondelete, onretry }: Props = $props()
 
   let listEl: HTMLDivElement | undefined = $state()
   let prevLength = 0
@@ -29,7 +30,7 @@
   })
 
   function handleScroll(): void {
-    if (listEl && listEl.scrollTop === 0) {
+    if (listEl && listEl.scrollTop === 0 && !isLoadingMore) {
       onloadprevious()
     }
   }

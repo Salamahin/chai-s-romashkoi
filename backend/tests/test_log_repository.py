@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import pytest
 
-from log.domain import LogEntryPatch, make_entry
+from conftest import TABLE_NAME
+
+from log.domain import LogEntry, LogEntryPatch, make_entry
 from log.repository import LogRepository
 
-TABLE_NAME = "profiles"
 OWNER = "alice@example.com"
 ENTRY_ID = "abc-123"
 NOW = "2026-04-11T14:05:00Z"
 TEXT = "Hello"
 
 
-def _make_entry(entry_id: str = ENTRY_ID, owner: str = OWNER, text: str = TEXT, now: str = NOW):  # type: ignore[no-untyped-def]
+def _make_entry(entry_id: str = ENTRY_ID, owner: str = OWNER, text: str = TEXT, now: str = NOW) -> LogEntry:
     return make_entry(entry_id, owner, text, now)
 
 

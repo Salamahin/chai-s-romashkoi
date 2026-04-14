@@ -97,6 +97,7 @@
 
     messages = [...messages, optimistic]
     inputText = ''
+    isSending = true
 
     try {
       const entry = await createEntry(token, text)
@@ -111,6 +112,8 @@
       messages = messages.map((m) =>
         m.localId === localId ? { ...m, delivery: 'failed' } : m,
       )
+    } finally {
+      isSending = false
     }
   }
 
@@ -246,6 +249,7 @@
     <!-- Message list -->
     <ChatMessageList
       {messages}
+      {isLoadingMore}
       onloadprevious={handleLoadPrevious}
       onedit={handleEdit}
       ondelete={handleDelete}

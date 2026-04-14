@@ -69,9 +69,13 @@ class LogRepository:
 
     def list_window(self, owner_email: str, week_start: str, week_end: str) -> tuple[LogEntry, ...]:
         pk = f"{_PK_PREFIX}{owner_email}"
+        # SK is "LOG#<logged_at>#<entry_id>". Use BETWEEN for efficient range scan, then
+        # post-filter to enforce the exclusive upper bound on logged_at matching the ADR contract.
         response = self._table.query(
             KeyConditionExpression=Key("PK").eq(pk)
             & Key("SK").between(f"{_SK_PREFIX}{week_start}", f"{_SK_PREFIX}{week_end}"),
         )
         items: list[dict[str, Any]] = response.get("Items", [])
-        return tuple(_item_to_entry(item) for item in items)
+        return tuple(
+            _item_to_entry(item) for item in items if str(item.get("logged_at", "")) < week_end
+        )
