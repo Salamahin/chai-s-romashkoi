@@ -20,6 +20,10 @@ LAYER_DIR="$DIST/layer/python"
 mkdir -p "$LAYER_DIR"
 pip install --quiet -t "$LAYER_DIR" -r "$DIST/requirements.txt"
 
+# auth.py and session_guard.py are shared utilities declared as Lambda Layer
+# modules. Copy them into the layer so handlers can import them at runtime.
+cp "$BACKEND/src/auth.py" "$BACKEND/src/session_guard.py" "$LAYER_DIR/"
+
 # Lambda layer structure must be python/<packages>/ so that the runtime resolves
 # imports under /opt/python/.
 cd "$DIST/layer"

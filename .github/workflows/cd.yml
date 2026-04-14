@@ -17,6 +17,11 @@ jobs:
         with:
           version: "latest"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install backend dependencies
         working-directory: backend
         run: uv sync
@@ -53,7 +58,7 @@ jobs:
         working-directory: deploy
         run: |
           echo "cf_dist_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
-          echo "cf_url=$(terraform output -raw cloudfront_url)"                 >> "$GITHUB_OUTPUT"
+          echo "frontend_bucket=$(terraform output -raw frontend_bucket_name)"  >> "$GITHUB_OUTPUT"
 
       - name: Install Node
         uses: actions/setup-node@v4
@@ -70,8 +75,7 @@ jobs:
 
       - name: Sync frontend assets to S3
         run: |
-          BUCKET=$(aws s3 ls | awk '/chai-s-romashkoi-frontend/ {print $3}')
-          aws s3 sync frontend/dist/ "s3://$BUCKET/" --delete
+          aws s3 sync frontend/dist/ "s3://${{ steps.tf.outputs.frontend_bucket }}/" --delete
 
       - name: Invalidate CloudFront cache
         run: |

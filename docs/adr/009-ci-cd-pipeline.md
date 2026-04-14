@@ -1,7 +1,7 @@
 # CI/CD Pipeline
 
 Date: 2026-04-14
-Status: Proposed
+Status: Accepted
 
 ## Context
 
