@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from auth import SessionClaims, VerificationError, verify_session_token
 
 CORS_HEADERS = {
@@ -7,6 +9,15 @@ CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "content-type,authorization",
 }
+
+
+def get_method(event: dict[str, object]) -> str:
+    request_context = cast(dict[str, object], event.get("requestContext") or {})
+    http = cast(dict[str, object], request_context.get("http") or {})
+    method = http.get("method")
+    if method:
+        return str(method)
+    return str(event.get("httpMethod", ""))
 
 
 def require_session(

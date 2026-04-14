@@ -13,7 +13,7 @@ from auth import VerificationError
 from relations.domain import build_send_records, normalise_label
 from relations.label_suggestions import known_labels
 from relations.repository import RelationRepository
-from session_guard import CORS_HEADERS, require_session
+from session_guard import CORS_HEADERS, get_method, require_session
 
 _SESSION_SECRET = os.environ["SESSION_SECRET"]
 _PROFILES_TABLE_NAME = os.environ["PROFILES_TABLE_NAME"]
@@ -23,17 +23,8 @@ _table = _dynamodb.Table(_PROFILES_TABLE_NAME)
 _repo = RelationRepository(_table)
 
 
-def _get_method(event: dict[str, object]) -> str:
-    request_context = cast(dict[str, object], event.get("requestContext") or {})
-    http = cast(dict[str, object], request_context.get("http") or {})
-    method = http.get("method")
-    if method:
-        return str(method)
-    return str(event.get("httpMethod", ""))
-
-
 def handler(event: dict[str, object], context: object) -> dict[str, object]:
-    method = _get_method(event)
+    method = get_method(event)
     raw_path = str(event.get("rawPath") or event.get("path") or "/")
 
     now_utc = int(datetime.now(UTC).timestamp())
