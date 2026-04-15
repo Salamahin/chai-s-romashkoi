@@ -298,12 +298,14 @@ async def get_relation_labels(claims: Annotated[SessionClaims, Depends(_require_
 async def get_log(request: Request, claims: Annotated[SessionClaims, Depends(_require_session)]) -> JSONResponse:
     week_start = request.query_params.get("week_start", "")
     week_end = request.query_params.get("week_end", "")
+    week_end_dt = datetime.fromisoformat(week_end) if week_end else None
+    week_start_dt = datetime.fromisoformat(week_start) if week_start else None
     entries = [
         e
         for (email, _), e in _log_store.items()
         if email == claims.email
-        and (not week_start or e.logged_at >= week_start)
-        and (not week_end or e.logged_at < week_end)
+        and (week_start_dt is None or datetime.fromisoformat(e.logged_at) >= week_start_dt)
+        and (week_end_dt is None or datetime.fromisoformat(e.logged_at) < week_end_dt)
     ]
     entries_sorted = sorted(entries, key=lambda e: e.logged_at)
     return JSONResponse({"entries": [to_response_dict(e) for e in entries_sorted]})

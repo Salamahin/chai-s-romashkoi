@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Generator
+from typing import Any
+
 import boto3
 import pytest
 from moto import mock_aws
@@ -17,7 +20,7 @@ CREATED_AT = "2026-04-10T12:00:00Z"
 
 
 @pytest.fixture
-def table():
+def table() -> Generator[Any, None, None]:
     with mock_aws():
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
         t = dynamodb.create_table(
@@ -53,11 +56,11 @@ def _make_pair(
     label: str = LABEL,
     relation_id: str = RELATION_ID,
     created_at: str = CREATED_AT,
-) -> tuple:
+) -> tuple:  # type: ignore[type-arg]
     return build_send_records(sender, recipient, label, relation_id, created_at)
 
 
-def test_put_pair_then_list_for_owner(table) -> None:
+def test_put_pair_then_list_for_owner(table) -> None:  # type: ignore[no-untyped-def]
     repo = RelationRepository(table)
     sender_copy, recipient_copy = _make_pair()
     repo.put_pair(sender_copy, recipient_copy)
@@ -71,7 +74,7 @@ def test_put_pair_then_list_for_owner(table) -> None:
     assert recipient_records[0] == recipient_copy
 
 
-def test_confirm_pair_updates_status(table) -> None:
+def test_confirm_pair_updates_status(table) -> None:  # type: ignore[no-untyped-def]
     repo = RelationRepository(table)
     sender_copy, recipient_copy = _make_pair()
     repo.put_pair(sender_copy, recipient_copy)
@@ -87,7 +90,7 @@ def test_confirm_pair_updates_status(table) -> None:
     assert recipient_records[0].direction == "received"
 
 
-def test_delete_pair_removes_both_copies(table) -> None:
+def test_delete_pair_removes_both_copies(table) -> None:  # type: ignore[no-untyped-def]
     repo = RelationRepository(table)
     sender_copy, recipient_copy = _make_pair()
     repo.put_pair(sender_copy, recipient_copy)
@@ -98,7 +101,7 @@ def test_delete_pair_removes_both_copies(table) -> None:
     assert repo.list_for_owner(RECIPIENT) == ()
 
 
-def test_count_pending_received_for_recipient_is_one(table) -> None:
+def test_count_pending_received_for_recipient_is_one(table) -> None:  # type: ignore[no-untyped-def]
     repo = RelationRepository(table)
     sender_copy, recipient_copy = _make_pair()
     repo.put_pair(sender_copy, recipient_copy)
@@ -107,7 +110,7 @@ def test_count_pending_received_for_recipient_is_one(table) -> None:
     assert repo.count_pending_received(SENDER) == 0
 
 
-def test_count_pending_received_is_zero_after_confirm(table) -> None:
+def test_count_pending_received_is_zero_after_confirm(table) -> None:  # type: ignore[no-untyped-def]
     repo = RelationRepository(table)
     sender_copy, recipient_copy = _make_pair()
     repo.put_pair(sender_copy, recipient_copy)
@@ -117,7 +120,7 @@ def test_count_pending_received_is_zero_after_confirm(table) -> None:
     assert repo.count_pending_received(RECIPIENT) == 0
 
 
-def test_put_pair_raises_on_duplicate_relation_id(table) -> None:
+def test_put_pair_raises_on_duplicate_relation_id(table) -> None:  # type: ignore[no-untyped-def]
     repo = RelationRepository(table)
     sender_copy, recipient_copy = _make_pair()
     repo.put_pair(sender_copy, recipient_copy)
@@ -126,7 +129,7 @@ def test_put_pair_raises_on_duplicate_relation_id(table) -> None:
         repo.put_pair(sender_copy, recipient_copy)
 
 
-def test_confirm_pair_raises_on_already_confirmed(table) -> None:
+def test_confirm_pair_raises_on_already_confirmed(table) -> None:  # type: ignore[no-untyped-def]
     repo = RelationRepository(table)
     sender_copy, recipient_copy = _make_pair()
     repo.put_pair(sender_copy, recipient_copy)
