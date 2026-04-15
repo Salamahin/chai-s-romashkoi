@@ -36,7 +36,6 @@
     }
   }
 
-  const isEdited = $derived(message.updated_at !== message.logged_at)
   const formattedTime = $derived(new Date(message.logged_at).toLocaleString())
 </script>
 
@@ -109,7 +108,7 @@
     <div class="flex items-center gap-2 text-xs text-gray-400 px-1">
       <span>{formattedTime}</span>
 
-      {#if isEdited}
+      {#if message.isEdited}
         <span class="text-gray-400">edited</span>
       {/if}
 

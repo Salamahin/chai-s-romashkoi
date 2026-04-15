@@ -10,6 +10,16 @@ terraform {
       version = "~> 2.0"
     }
   }
+
+  # Remote state backend provisioned by deploy/bootstrap/.
+  # The backend block does not support variable interpolation, so names are hardcoded.
+  backend "s3" {
+    bucket         = "chai-s-romashkoi-tf-state"
+    key            = "prod/terraform.tfstate"
+    region         = "eu-central-1"
+    dynamodb_table = "chai-s-romashkoi-tf-lock"
+    encrypt        = true
+  }
 }
 
 provider "aws" {

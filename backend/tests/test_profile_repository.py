@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from profile.domain import Profile, ProfileEntry, ProfilePatch
 from profile.repository import ProfileRepository
+from typing import Any
 
 import boto3
 import pytest
@@ -21,7 +23,7 @@ ENTRY_C = ProfileEntry(
 
 
 @pytest.fixture
-def table():
+def table() -> Generator[Any, None, None]:
     with mock_aws():
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
         t = dynamodb.create_table(
@@ -39,12 +41,12 @@ def table():
         yield t
 
 
-def test_get_returns_empty_profile_for_new_user(table):
+def test_get_returns_empty_profile_for_new_user(table) -> None:  # type: ignore[no-untyped-def]
     repo = ProfileRepository(table)
     assert repo.get("user1") == Profile(user_sub="user1", entries=())
 
 
-def test_upsert_and_get_roundtrip(table):
+def test_upsert_and_get_roundtrip(table) -> None:  # type: ignore[no-untyped-def]
     repo = ProfileRepository(table)
     patch = ProfilePatch(upserted=(ENTRY_A, ENTRY_B), deleted_ids=())
     repo.apply("user1", patch)
@@ -53,7 +55,7 @@ def test_upsert_and_get_roundtrip(table):
     assert profile == Profile(user_sub="user1", entries=(ENTRY_A, ENTRY_B))
 
 
-def test_get_returns_entries_sorted_by_entry_id(table):
+def test_get_returns_entries_sorted_by_entry_id(table) -> None:  # type: ignore[no-untyped-def]
     repo = ProfileRepository(table)
     # Insert in reverse order — result must still be sorted by SK (ULID).
     patch = ProfilePatch(upserted=(ENTRY_C, ENTRY_A, ENTRY_B), deleted_ids=())
@@ -63,7 +65,7 @@ def test_get_returns_entries_sorted_by_entry_id(table):
     assert profile.entries == (ENTRY_A, ENTRY_B, ENTRY_C)
 
 
-def test_upsert_overwrites_existing_entry(table):
+def test_upsert_overwrites_existing_entry(table) -> None:  # type: ignore[no-untyped-def]
     repo = ProfileRepository(table)
     repo.apply("user1", ProfilePatch(upserted=(ENTRY_A,), deleted_ids=()))
 
@@ -76,7 +78,7 @@ def test_upsert_overwrites_existing_entry(table):
     assert profile.entries == (updated,)
 
 
-def test_delete_removes_entry(table):
+def test_delete_removes_entry(table) -> None:  # type: ignore[no-untyped-def]
     repo = ProfileRepository(table)
     repo.apply("user1", ProfilePatch(upserted=(ENTRY_A, ENTRY_B), deleted_ids=()))
     repo.apply("user1", ProfilePatch(upserted=(), deleted_ids=(ENTRY_A.entry_id,)))
@@ -85,7 +87,7 @@ def test_delete_removes_entry(table):
     assert profile.entries == (ENTRY_B,)
 
 
-def test_delete_nonexistent_entry_is_a_noop(table):
+def test_delete_nonexistent_entry_is_a_noop(table) -> None:  # type: ignore[no-untyped-def]
     repo = ProfileRepository(table)
     repo.apply("user1", ProfilePatch(upserted=(ENTRY_A,), deleted_ids=()))
     repo.apply("user1", ProfilePatch(upserted=(), deleted_ids=("nonexistent-id",)))
@@ -94,7 +96,7 @@ def test_delete_nonexistent_entry_is_a_noop(table):
     assert profile.entries == (ENTRY_A,)
 
 
-def test_users_are_isolated(table):
+def test_users_are_isolated(table) -> None:  # type: ignore[no-untyped-def]
     repo = ProfileRepository(table)
     repo.apply("user1", ProfilePatch(upserted=(ENTRY_A,), deleted_ids=()))
     repo.apply("user2", ProfilePatch(upserted=(ENTRY_B,), deleted_ids=()))

@@ -6,5 +6,6 @@ export interface ChatMessage {
   raw_text: string
   logged_at: string
   updated_at: string
+  isEdited: boolean
   delivery: DeliveryState
 }

@@ -24,7 +24,7 @@ from profile.domain import Profile, ProfileEntry, apply_patch, compute_patch, no
 from profile.tags import STANDARD_TAGS, known_tags  # noqa: E402
 
 from auth import SessionClaims, VerificationError, sign_session_token, verify_session_token  # noqa: E402
-from log.domain import LogEntry, LogEntryPatch, apply_patch, make_entry, to_response_dict  # noqa: E402
+from log.domain import LogEntry, LogEntryPatch, make_entry, to_response_dict  # noqa: E402
 from relations.domain import RelationRecord, build_send_records, normalise_label  # noqa: E402
 from relations.label_suggestions import known_labels  # noqa: E402
 
@@ -298,12 +298,14 @@ async def get_relation_labels(claims: Annotated[SessionClaims, Depends(_require_
 async def get_log(request: Request, claims: Annotated[SessionClaims, Depends(_require_session)]) -> JSONResponse:
     week_start = request.query_params.get("week_start", "")
     week_end = request.query_params.get("week_end", "")
+    week_end_dt = datetime.fromisoformat(week_end) if week_end else None
+    week_start_dt = datetime.fromisoformat(week_start) if week_start else None
     entries = [
         e
         for (email, _), e in _log_store.items()
         if email == claims.email
-        and (not week_start or e.logged_at >= week_start)
-        and (not week_end or e.logged_at < week_end)
+        and (week_start_dt is None or datetime.fromisoformat(e.logged_at) >= week_start_dt)
+        and (week_end_dt is None or datetime.fromisoformat(e.logged_at) < week_end_dt)
     ]
     entries_sorted = sorted(entries, key=lambda e: e.logged_at)
     return JSONResponse({"entries": [to_response_dict(e) for e in entries_sorted]})
@@ -336,9 +338,11 @@ async def put_log(
         text = str(body["text"])
     except (KeyError, ValueError):
         return JSONResponse({"error": "invalid body"}, status_code=400)
+    from log.domain import apply_patch as apply_log_patch  # noqa: PLC0415
+
     now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     patch = LogEntryPatch(raw_text=text, updated_at=now)
-    updated = apply_patch(entry, patch)
+    updated = apply_log_patch(entry, patch)
     _log_store[key] = updated
     return JSONResponse(to_response_dict(updated))
 

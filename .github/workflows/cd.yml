@@ -1,0 +1,86 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync
+
+      - name: Build Lambda zips
+        run: scripts/build_lambdas.sh
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::978092319422:role/chai-s-romashkoi-deploy
+          aws-region: eu-central-1
+
+      - name: Terraform init
+        working-directory: deploy
+        run: terraform init
+
+      - name: Terraform apply
+        working-directory: deploy
+        env:
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
+          TF_VAR_layer_zip_path: ../backend/dist/layer.zip
+          TF_VAR_auth_zip_path: ../backend/dist/auth.zip
+          TF_VAR_app_zip_path: ../backend/dist/app.zip
+          TF_VAR_profile_zip_path: ../backend/dist/profile.zip
+          TF_VAR_relations_zip_path: ../backend/dist/relations.zip
+          TF_VAR_log_zip_path: ../backend/dist/log.zip
+        run: terraform apply -auto-approve
+
+      - name: Read Terraform outputs
+        id: tf
+        working-directory: deploy
+        run: |
+          echo "cf_dist_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
+          echo "frontend_bucket=$(terraform output -raw frontend_bucket_name)"  >> "$GITHUB_OUTPUT"
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Sync frontend assets to S3
+        run: |
+          aws s3 sync frontend/dist/ "s3://${{ steps.tf.outputs.frontend_bucket }}/" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.tf.outputs.cf_dist_id }} \
+            --paths "/*"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from boto3.dynamodb.conditions import Key
@@ -69,9 +70,22 @@ class LogRepository:
 
     def list_window(self, owner_email: str, week_start: str, week_end: str) -> tuple[LogEntry, ...]:
         pk = f"{_PK_PREFIX}{owner_email}"
+        # SK is "LOG#<logged_at>#<entry_id>". Use BETWEEN for efficient range scan, then
+        # post-filter to enforce the exclusive upper bound on logged_at matching the ADR contract.
+        # Use "Z~" suffix on upper bound so DynamoDB's lexicographic BETWEEN includes entries
+        # whose second-precision SK ("...T05:13:00Z#uuid") would otherwise sort AFTER a
+        # millisecond-precision week_end string ("...T05:13:00.500Z") due to "Z"(90) > "."(46).
         response = self._table.query(
             KeyConditionExpression=Key("PK").eq(pk)
-            & Key("SK").between(f"{_SK_PREFIX}{week_start}", f"{_SK_PREFIX}{week_end}"),
+            & Key("SK").between(
+                f"{_SK_PREFIX}{week_start}",
+                f"{_SK_PREFIX}{week_end[:19]}Z~",
+            ),
         )
         items: list[dict[str, Any]] = response.get("Items", [])
-        return tuple(_item_to_entry(item) for item in items)
+        week_end_dt = datetime.fromisoformat(week_end)
+        return tuple(
+            _item_to_entry(item)
+            for item in items
+            if datetime.fromisoformat(str(item.get("logged_at", ""))) < week_end_dt
+        )

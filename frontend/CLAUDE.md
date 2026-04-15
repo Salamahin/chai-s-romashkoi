@@ -9,6 +9,10 @@ TypeScript + Svelte 5, built with Vite, styled with Tailwind CSS.
 - **Build**: `npm run build`
 - **E2E tests**: see `integration_tests/` — requires backend running on :8000
 
+## Rules
+
+- After every code change, run `npx svelte-check --tsconfig tsconfig.json` and fix all reported errors before finishing.
+
 ## Conventions
 
 - Use Svelte 5 runes (`$state`, `$derived`, `$effect`, `$props`) — no legacy Options API.

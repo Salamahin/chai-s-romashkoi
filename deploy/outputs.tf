@@ -22,3 +22,13 @@ output "relations_function_url" {
   description = "Direct Lambda Function URL for the relations handler"
   value       = module.lambda.relations_function_url
 }
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID used for cache invalidation"
+  value       = module.frontend.cloudfront_distribution_id
+}
+
+output "frontend_bucket_name" {
+  description = "S3 bucket name for frontend assets"
+  value       = module.frontend.frontend_bucket_name
+}

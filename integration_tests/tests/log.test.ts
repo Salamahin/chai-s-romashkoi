@@ -10,6 +10,7 @@ async function loginToChat(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: 'Login as dev@local.dev' }).click()
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
+  await page.waitForLoadState('networkidle')
 }
 
 async function sendMessage(page: Page, text: string): Promise<void> {
