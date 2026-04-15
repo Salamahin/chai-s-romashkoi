@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import TABLE_NAME
-
 from log.domain import LogEntry, LogEntryPatch, make_entry
 from log.repository import LogRepository
 

@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 import os
 import time
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 from unittest.mock import patch
 
 import pytest
+from conftest import TABLE_NAME
 
 from auth import SessionClaims, sign_session_token
-from conftest import TABLE_NAME
 
 OWNER_EMAIL = "alice@example.com"
 SESSION_SECRET = "test-secret"
@@ -69,7 +70,11 @@ def test_get_log_returns_entries(patched_handler: tuple[Any, Any]) -> None:
     repo.put(entry)
 
     response = log_handler.handler(
-        _make_event("GET", "/log", query_params={"week_start": "2026-04-11T00:00:00Z", "week_end": "2026-04-12T00:00:00Z"}),
+        _make_event(
+            "GET",
+            "/log",
+            query_params={"week_start": "2026-04-11T00:00:00Z", "week_end": "2026-04-12T00:00:00Z"},
+        ),
         None,
     )
     assert response["statusCode"] == 200
@@ -168,7 +173,11 @@ def test_get_log_only_returns_own_entries(patched_handler: tuple[Any, Any]) -> N
     repo.put(make_entry("own-e1", OWNER_EMAIL, "Mine", "2026-04-11T11:00:00Z"))
 
     response = log_handler.handler(
-        _make_event("GET", "/log", query_params={"week_start": "2026-04-11T00:00:00Z", "week_end": "2026-04-12T00:00:00Z"}),
+        _make_event(
+            "GET",
+            "/log",
+            query_params={"week_start": "2026-04-11T00:00:00Z", "week_end": "2026-04-12T00:00:00Z"},
+        ),
         None,
     )
     assert response["statusCode"] == 200

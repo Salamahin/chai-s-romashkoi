@@ -8,6 +8,10 @@ Python, FastAPI (dev only), AWS Lambda (prod).
 - **Lint**: `uv run ruff check .`
 - **Type check**: `uv run mypy .`
 
+## Rules
+
+- After every code change, run `uv run ruff check .` and fix all reported errors before finishing.
+
 ## Conventions
 
 - All Lambda handlers follow the pattern in `src/app/dispatcher.py`: single `handler(event, context)` entry point.

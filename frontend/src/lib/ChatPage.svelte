@@ -39,6 +39,7 @@
       raw_text: entry.raw_text,
       logged_at: entry.logged_at,
       updated_at: entry.updated_at,
+      isEdited: entry.updated_at !== entry.logged_at,
       delivery: 'saved',
     }
   }
@@ -92,6 +93,7 @@
       raw_text: text,
       logged_at: now,
       updated_at: now,
+      isEdited: false,
       delivery: 'pending',
     }
 
@@ -128,7 +130,7 @@
       const updated = await editEntry(token, message.entry_id, newText)
       messages = messages.map((m) =>
         m.localId === localId
-          ? { ...m, raw_text: updated.raw_text, updated_at: updated.updated_at }
+          ? { ...m, raw_text: updated.raw_text, updated_at: updated.updated_at, isEdited: true }
           : m,
       )
     } catch (e) {

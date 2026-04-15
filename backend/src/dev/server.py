@@ -24,7 +24,7 @@ from profile.domain import Profile, ProfileEntry, apply_patch, compute_patch, no
 from profile.tags import STANDARD_TAGS, known_tags  # noqa: E402
 
 from auth import SessionClaims, VerificationError, sign_session_token, verify_session_token  # noqa: E402
-from log.domain import LogEntry, LogEntryPatch, apply_patch, make_entry, to_response_dict  # noqa: E402
+from log.domain import LogEntry, LogEntryPatch, make_entry, to_response_dict  # noqa: E402
 from relations.domain import RelationRecord, build_send_records, normalise_label  # noqa: E402
 from relations.label_suggestions import known_labels  # noqa: E402
 
@@ -336,9 +336,11 @@ async def put_log(
         text = str(body["text"])
     except (KeyError, ValueError):
         return JSONResponse({"error": "invalid body"}, status_code=400)
+    from log.domain import apply_patch as apply_log_patch  # noqa: PLC0415
+
     now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     patch = LogEntryPatch(raw_text=text, updated_at=now)
-    updated = apply_patch(entry, patch)
+    updated = apply_log_patch(entry, patch)
     _log_store[key] = updated
     return JSONResponse(to_response_dict(updated))
 
