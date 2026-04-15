@@ -21,10 +21,6 @@ provider "aws" {
 resource "aws_s3_bucket" "tf_state" {
   bucket = "${var.project_name}-tf-state"
 
-  # prevent_destroy guards against accidental deletion of all Terraform state
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_s3_bucket_versioning" "tf_state" {
@@ -64,9 +60,4 @@ resource "aws_dynamodb_table" "tf_lock" {
     type = "S"
   }
 
-  # prevent_destroy guards against losing the lock table, which would leave
-  # state potentially inconsistent
-  lifecycle {
-    prevent_destroy = true
-  }
 }
