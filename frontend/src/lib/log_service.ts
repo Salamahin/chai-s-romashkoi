@@ -1,7 +1,7 @@
 import { assertOk } from './http_utils'
 
 const apiUrl: string =
-  (import.meta.env.VITE_LOG_API_URL as string | undefined) ?? 'http://localhost:8000'
+  ((import.meta.env.VITE_LOG_API_URL as string | undefined) ?? 'http://localhost:8000').replace(/\/$/, '')
 
 export interface LogEntry {
   entry_id: string
