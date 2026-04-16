@@ -1,3 +1,7 @@
+# Rules
+
+* Never read, write, or search files outside the project root directory. This is strictly prohibited.
+
 # Constitution
 
 * Web-based with adaptive design
@@ -58,5 +62,5 @@
 
 ## Docs (GitHub Wiki)
 - `adr/` — Architecture Decision Records; published by the architect agent via `scripts/publish_adr.sh`
-- To read an existing ADR, clone the wiki locally: `git clone https://github.com/Salamahin/chai-s-romashkoi.wiki.git /tmp/wiki && cat /tmp/wiki/adr/<NNN>-<slug>.md`
-- ADR files must not be committed to this repo. They live exclusively in the GitHub wiki. If any `docs/adr/` or `/tmp/*.md` ADR files are found locally, delete them.
+- To read an existing ADR, clone the wiki inside the project: `git clone https://github.com/Salamahin/chai-s-romashkoi.wiki.git .wiki && cat .wiki/adr/<NNN>-<slug>.md` (delete `.wiki/` afterwards)
+- ADR files must not be committed to this repo. They live exclusively in the GitHub wiki. If any `docs/adr/` ADR files are found locally, delete them.
