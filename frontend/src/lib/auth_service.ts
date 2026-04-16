@@ -28,7 +28,7 @@ export async function exchangeToken(googleIdToken: string): Promise<void> {
     body: JSON.stringify({ credential: googleIdToken }),
   })
   if (!res.ok) {
-    throw new Error(`Token exchange failed: ${res.status}`)
+    throw new Error('Sign-in failed. Please try again.')
   }
   const data = (await res.json()) as { session_token: string }
   storeSessionToken(data.session_token)
