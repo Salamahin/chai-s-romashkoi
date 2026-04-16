@@ -11,3 +11,7 @@ output "frontend_bucket_name" {
   description = "S3 bucket name for frontend assets"
   value       = aws_s3_bucket.this.bucket
 }
+
+output "cloudfront_hosted_zone_id" {
+  value = aws_cloudfront_distribution.this.hosted_zone_id
+}

@@ -48,4 +48,5 @@ module "frontend" {
   profile_function_url = module.lambda.profile_function_url
   relations_api_url    = module.lambda.relations_function_url
   log_api_url          = module.lambda.log_function_url
+  acm_certificate_arn  = aws_acm_certificate_validation.app.certificate_arn
 }

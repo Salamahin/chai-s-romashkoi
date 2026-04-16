@@ -32,3 +32,8 @@ variable "log_api_url" {
   description = "Function URL for the log handler Lambda"
   type        = string
 }
+
+variable "acm_certificate_arn" {
+  description = "ARN of the ACM certificate (must be in us-east-1) for the CloudFront custom domain"
+  type        = string
+}
