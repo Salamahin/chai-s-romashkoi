@@ -20,6 +20,7 @@ export default async function globalSetup(): Promise<void> {
     ...process.env,
     VITE_OAUTH_ISSUER_URL: 'http://localhost:4444',
     VITE_GOOGLE_CLIENT_ID: 'e2e-client',
+    VITE_API_URL: 'http://localhost:8000',
     OAUTH_MOCK_TOKEN_ENDPOINT: 'http://localhost:4444/token',
     OAUTH_VALID_ISSUERS: 'http://localhost:4444',
     JWKS_URL: 'http://localhost:4444/jwks',

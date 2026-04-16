@@ -7,7 +7,7 @@ from typing import Any
 # Set env vars required by Lambda handlers before they are imported.
 # All handler modules read these at module level; setting them here ensures
 # they are available regardless of import order during test collection.
-os.environ.setdefault("SESSION_SECRET", "test-secret-for-tests")
+os.environ.setdefault("SESSION_SECRET", "test-secret-for-tests-minimum-32b")
 os.environ.setdefault("PROFILES_TABLE_NAME", "profiles")
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 os.environ.setdefault("AWS_ACCESS_KEY_ID", "testing")

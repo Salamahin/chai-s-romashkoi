@@ -43,26 +43,10 @@ def _make_token(
     return jwt.encode(payload, rsa_key, algorithm="RS256", headers={"kid": kid})
 
 
-def _make_jwks(rsa_key: rsa.RSAPrivateKey, kid: str = "key-1") -> dict[str, object]:
-    pub = rsa_key.public_key()
-    from jwt import PyJWK
-
-    jwk = PyJWK.from_jwk(
-        {
-            "kty": "RSA",
-            "use": "sig",
-            "alg": "RS256",
-            "kid": kid,
-            **jwt.algorithms.RSAAlgorithm.to_jwk(pub, as_dict=True),  # type: ignore[attr-defined]
-        }
-    )
-    return {"keys": [jwk.key_type and jwk._jwk_data]}  # type: ignore[attr-defined]
-
-
 def _build_jwks(rsa_key: rsa.RSAPrivateKey, kid: str = "key-1") -> dict[str, object]:
     """Return a JWKS payload dict containing the public key."""
     pub = rsa_key.public_key()
-    jwk_dict = jwt.algorithms.RSAAlgorithm.to_jwk(pub, as_dict=True)  # type: ignore[attr-defined]
+    jwk_dict = jwt.algorithms.RSAAlgorithm.to_jwk(pub, as_dict=True)
     jwk_dict.update({"kty": "RSA", "use": "sig", "alg": "RS256", "kid": kid})
     return {"keys": [jwk_dict]}
 

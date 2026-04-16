@@ -26,6 +26,7 @@ export default defineConfig({
     env: {
       VITE_OAUTH_ISSUER_URL: 'http://localhost:4444',
       VITE_GOOGLE_CLIENT_ID: 'e2e-client',
+      VITE_API_URL: 'http://localhost:8000',
     },
   },
 })

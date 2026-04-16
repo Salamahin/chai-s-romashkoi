@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('dev login lands on the chat page and can navigate to profile', async ({ page }) => {
+test('OAuth login redirects to home page', async ({ page }) => {
   await page.goto('/')
 
   const loginButton = page.getByRole('button', { name: 'Login' })
