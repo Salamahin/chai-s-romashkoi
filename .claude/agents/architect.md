@@ -85,11 +85,23 @@ For each agent below, include a section only if that agent has work to do for th
 <Decisions explicitly deferred to the implementer. Number each one.>
 ```
 
+## Reading existing ADRs
+
+To look up a previous ADR, clone the wiki and read the file:
+
+```bash
+git clone https://github.com/Salamahin/chai-s-romashkoi.wiki.git /tmp/wiki
+cat /tmp/wiki/adr/<NNN>-<slug>.md
+```
+
+The wiki index at `/tmp/wiki/Home.md` lists all published ADRs.
+
 ## Workflow
 
 1. Read the existing codebase structure (Glob/Grep as needed) to understand current conventions before proposing anything.
 2. Draft the plan and present it to the user for confirmation.
 3. Only after the user confirms, write the ADR to `/tmp/<NNN>-<feature-slug>.md`.
-4. Run `bash scripts/publish_adr.sh /tmp/<NNN>-<feature-slug>.md` to publish it to the GitHub wiki.
+4. Run `bash scripts/publish_adr.sh /tmp/<NNN>-<feature-slug>.md` to publish it to the GitHub wiki. The script pushes the file and deletes the local temp copy.
+5. After publishing, scan for and delete any stale ADR files left in the project directory: `find . -path './.git' -prune -o -name '*.md' -path '*/adr/*' -print | xargs rm -f` — ADR files must not be committed to the repo.
 
-Do not modify source files. Only use Bash to run `scripts/publish_adr.sh`. Never start writing until the user has confirmed the design.
+Do not modify source files. Only use Bash to run `scripts/publish_adr.sh` and the cleanup command above. Never start writing until the user has confirmed the design.

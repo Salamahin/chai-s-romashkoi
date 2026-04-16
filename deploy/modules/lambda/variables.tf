@@ -54,5 +54,5 @@ variable "jwks_url" {
 variable "session_ttl_seconds" {
   description = "Session lifetime in seconds"
   type        = number
-  default     = 900
+  default     = 28800
 }
