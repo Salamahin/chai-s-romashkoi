@@ -52,8 +52,9 @@
 - `local_run.sh` — start backend (:8000) and frontend (:5173)
 - `local_kill.sh` — stop both
 - `e2e.sh` — start backend, run Playwright e2e suite
+- `publish_adr.sh <file>` — push a local ADR file to the GitHub wiki and delete it locally
 
 ## Claude Configuration (`.claude/`)
 
-## Docs (`docs/`)
-- `adr/` — Architecture Decision Records (produced by architect agent)
+## Docs (GitHub Wiki)
+- `adr/` — Architecture Decision Records; published by the architect agent via `scripts/publish_adr.sh`
