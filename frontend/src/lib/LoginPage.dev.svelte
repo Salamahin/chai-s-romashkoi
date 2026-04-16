@@ -22,7 +22,16 @@
 
 <div class="flex min-h-screen items-center justify-center bg-gray-50 px-4">
   <div class="w-full max-w-sm rounded-lg border border-gray-200 bg-white px-8 py-10 text-center">
-    <h1 class="mb-1 text-lg font-semibold text-gray-800 tracking-tight">Chai's Romashkoi</h1>
+    <pre class="mb-4 font-mono text-xs leading-tight text-gray-400 text-left inline-block">   * . * . *
+  . \ | / .
+  *-( o )-*
+  . / | \ .
+   * . * . *
+   _________
+  / ~~~~~~~ \
+ |           |
+  \_________/</pre>
+    <h1 class="mb-1 text-lg font-semibold text-gray-800 tracking-tight">Chai s Romashkoi</h1>
     <p class="mb-8 text-sm text-gray-400">Local development</p>
 
     <button
