@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { E2E_USER } from '../test-constants'
 
 const BACKEND = 'http://localhost:8000'
 
@@ -6,7 +7,7 @@ async function seedReceivedRelation(peerEmail: string, label: string): Promise<s
   const res = await fetch(`${BACKEND}/test/seed-relation`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ peer_email: peerEmail, label }),
+    body: JSON.stringify({ peer_email: peerEmail, label, for_email: E2E_USER }),
   })
   const data = (await res.json()) as { relation_id: string }
   return data.relation_id
@@ -14,7 +15,7 @@ async function seedReceivedRelation(peerEmail: string, label: string): Promise<s
 
 async function loginAndGoToProfile(page: Page): Promise<void> {
   await page.goto('/')
-  const loginButton = page.getByRole('button', { name: 'Login as dev@local.dev' })
+  const loginButton = page.getByRole('button', { name: 'Login' })
   await expect(loginButton).toBeVisible()
   await loginButton.click()
   const profileButton = page.getByRole('button', { name: /^Profile/ })
@@ -23,30 +24,14 @@ async function loginAndGoToProfile(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: 'Add entry' })).toBeVisible()
 }
 
-async function clearAllRelations(page: Page): Promise<void> {
-  // Wait for RelationsPanel's initial load to complete before interacting
-  await page.waitForLoadState('networkidle')
-  // Reject any pending-received relations first
-  let count = await page.getByRole('button', { name: 'Reject' }).count()
-  while (count > 0) {
-    await page.getByRole('button', { name: 'Reject' }).first().click()
-    await page.getByText('Loading…').waitFor({ state: 'visible', timeout: 3000 }).catch(() => {})
-    await page.getByText('Loading…').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
-    count = await page.getByRole('button', { name: 'Reject' }).count()
-  }
-  // Delete any pending-sent and confirmed relations
-  count = await page.getByRole('button', { name: 'Delete' }).count()
-  while (count > 0) {
-    await page.getByRole('button', { name: 'Delete' }).first().click()
-    await page.getByText('Loading…').waitFor({ state: 'visible', timeout: 3000 }).catch(() => {})
-    await page.getByText('Loading…').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
-    count = await page.getByRole('button', { name: 'Delete' }).count()
-  }
-}
 
 test.beforeEach(async ({ page }) => {
+  await fetch(`${BACKEND}/test/clear-relations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ for_email: E2E_USER }),
+  })
   await loginAndGoToProfile(page)
-  await clearAllRelations(page)
 })
 
 test('relations panel is visible on the profile page', async ({ page }) => {

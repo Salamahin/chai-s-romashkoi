@@ -5,7 +5,14 @@ import os
 from datetime import UTC, datetime
 from typing import cast
 
-from auth import SessionClaims, VerificationError, fetch_jwks, sign_session_token, verify_google_id_token
+from auth import (
+    SessionClaims,
+    VerificationError,
+    fetch_jwks,
+    parse_valid_issuers,
+    sign_session_token,
+    verify_google_id_token,
+)
 from session_guard import CORS_HEADERS
 
 
@@ -14,6 +21,7 @@ def handler(event: dict[str, object], context: object) -> dict[str, object]:
     session_secret = os.environ["SESSION_SECRET"]
     jwks_url = os.environ.get("JWKS_URL", "https://www.googleapis.com/oauth2/v3/certs")
     session_ttl_seconds = int(os.environ.get("SESSION_TTL_SECONDS", "900"))
+    valid_issuers = parse_valid_issuers(os.environ.get("OAUTH_VALID_ISSUERS", ""))
 
     try:
         body = json.loads(cast(str, event.get("body") or ""))
@@ -24,7 +32,7 @@ def handler(event: dict[str, object], context: object) -> dict[str, object]:
     now_utc = int(datetime.now(UTC).timestamp())
     try:
         jwks = fetch_jwks(jwks_url)
-        google_claims = verify_google_id_token(credential, jwks, google_client_id, now_utc)
+        google_claims = verify_google_id_token(credential, jwks, google_client_id, now_utc, valid_issuers)
     except VerificationError as e:
         return {"statusCode": 401, "headers": CORS_HEADERS, "body": json.dumps({"error": str(e)})}
 

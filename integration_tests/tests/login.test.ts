@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test('dev login lands on the chat page and can navigate to profile', async ({ page }) => {
   await page.goto('/')
 
-  const loginButton = page.getByRole('button', { name: 'Login as dev@local.dev' })
+  const loginButton = page.getByRole('button', { name: 'Login' })
   await expect(loginButton).toBeVisible()
 
   await loginButton.click()

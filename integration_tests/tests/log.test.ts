@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { E2E_USER } from '../test-constants'
 
 const BACKEND = 'http://localhost:8000'
 
@@ -8,7 +9,7 @@ async function clearLog(): Promise<void> {
 
 async function loginToChat(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Login as dev@local.dev' }).click()
+  await page.getByRole('button', { name: 'Login' }).click()
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
   await page.waitForLoadState('networkidle')
 }
@@ -50,7 +51,7 @@ test('GET /log is called with correct path after login', async ({ page }) => {
   })
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'login as dev@local.dev' }).click()
+  await page.getByRole('button', { name: 'Login' }).click()
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
   await page.waitForLoadState('networkidle')
 
@@ -76,7 +77,7 @@ test('403 on initial log fetch shows an error banner', async ({ page }) => {
   })
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'login as dev@local.dev' }).click()
+  await page.getByRole('button', { name: 'Login' }).click()
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
   await page.waitForLoadState('networkidle')
 
@@ -246,7 +247,7 @@ test('scrolling to top loads entries from the previous week', async ({ page }) =
   await fetch(`${BACKEND}/test/seed-log-entry`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: 'Old entry from last week', logged_at: eightDaysAgo }),
+    body: JSON.stringify({ text: 'Old entry from last week', logged_at: eightDaysAgo, for_email: E2E_USER }),
   })
 
   // Send a current-week message so the list has content and isn't already scrolled to top
@@ -270,7 +271,7 @@ test('pending badge count shows in chat header when a relation is pending', asyn
   await fetch('http://localhost:8000/test/seed-relation', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ peer_email: 'badge-test@example.com', label: 'friend' }),
+    body: JSON.stringify({ peer_email: 'badge-test@example.com', label: 'friend', for_email: E2E_USER }),
   })
 
   await page.reload()

@@ -6,14 +6,10 @@ import path from 'path'
 export default defineConfig(({ mode }) => ({
   plugins: [svelte(), tailwindcss()],
   resolve: {
-    alias: mode === 'development' ? [
+    alias: mode !== 'production' ? [
       {
         find: /.*\/LoginPage\.svelte$/,
-        replacement: path.resolve(__dirname, 'src/lib/LoginPage.dev.svelte'),
-      },
-      {
-        find: /.*\/auth_service$/,
-        replacement: path.resolve(__dirname, 'src/lib/auth_service.dev.ts'),
+        replacement: path.resolve(__dirname, 'src/lib/LoginPage.e2e.svelte'),
       },
     ] : [],
   },

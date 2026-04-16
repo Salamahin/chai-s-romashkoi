@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 async function login(page: Page): Promise<void> {
   await page.goto('/')
-  const loginButton = page.getByRole('button', { name: 'Login as dev@local.dev' })
+  const loginButton = page.getByRole('button', { name: 'Login' })
   await expect(loginButton).toBeVisible()
   await loginButton.click()
   const profileButton = page.getByRole('button', { name: 'Profile' })

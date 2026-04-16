@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
+import urllib.parse
+import urllib.request
 import uuid
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -23,7 +26,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from profile.domain import Profile, ProfileEntry, apply_patch, compute_patch, normalise_entry  # noqa: E402
 from profile.tags import STANDARD_TAGS, known_tags  # noqa: E402
 
-from auth import SessionClaims, VerificationError, sign_session_token, verify_session_token  # noqa: E402
+from auth import (  # noqa: E402
+    SessionClaims,
+    VerificationError,
+    fetch_jwks,
+    parse_valid_issuers,
+    sign_session_token,
+    verify_google_id_token,
+    verify_session_token,
+)
 from log.domain import LogEntry, LogEntryPatch, make_entry, to_response_dict  # noqa: E402
 from relations.domain import RelationRecord, build_send_records, normalise_label  # noqa: E402
 from relations.label_suggestions import known_labels  # noqa: E402
@@ -132,9 +143,51 @@ def _count_pending_received(owner_email: str) -> int:
 
 
 @app.post("/auth/session")
-async def auth_session() -> JSONResponse:
+async def auth_session(request: Request) -> JSONResponse:
     now_utc = _now_utc()
-    claims = SessionClaims(sub=DEV_SUB, email=DEV_EMAIL, exp=0)
+    mock_token_endpoint = os.environ.get("OAUTH_MOCK_TOKEN_ENDPOINT", "")
+    if mock_token_endpoint:
+        try:
+            body: dict[str, Any] = await request.json()
+            code = str(body["credential"])
+        except (KeyError, ValueError):
+            return JSONResponse({"error": "missing credential"}, status_code=400)
+
+        jwks_url = os.environ.get("JWKS_URL", "https://www.googleapis.com/oauth2/v3/certs")
+        client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
+        redirect_uri = os.environ.get("OAUTH_REDIRECT_URI", "")
+
+        token_request_data = urllib.parse.urlencode(
+            {
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "client_id": client_id,
+            }
+        ).encode()
+        try:
+            req = urllib.request.Request(  # noqa: S310
+                mock_token_endpoint,
+                data=token_request_data,
+                method="POST",
+            )
+            with urllib.request.urlopen(req) as resp:  # noqa: S310
+                token_response: dict[str, Any] = json.loads(resp.read().decode())
+            id_token = str(token_response["id_token"])
+        except Exception as exc:
+            return JSONResponse({"error": f"token exchange failed: {exc}"}, status_code=401)
+
+        valid_issuers = parse_valid_issuers(os.environ.get("OAUTH_VALID_ISSUERS", ""))
+        try:
+            jwks = fetch_jwks(jwks_url)
+            google_claims = verify_google_id_token(id_token, jwks, client_id, now_utc, valid_issuers)
+        except VerificationError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=401)
+
+        claims = SessionClaims(sub=google_claims.sub, email=google_claims.email, exp=0)
+    else:
+        return JSONResponse({"error": "OAUTH_MOCK_TOKEN_ENDPOINT is not set"}, status_code=500)
+
     token = sign_session_token(claims, _SESSION_SECRET, now_utc, _SESSION_TTL_SECONDS)
     return JSONResponse({"session_token": token})
 
@@ -260,13 +313,14 @@ async def delete_relation(
 @app.post("/test/seed-relation")
 async def seed_relation(request: Request) -> JSONResponse:
     body: dict[str, Any] = await request.json()
+    owner_email = str(body.get("for_email", DEV_EMAIL))
     peer_email = str(body["peer_email"])
     label = normalise_label(str(body["label"]))
     relation_id = str(uuid.uuid4())
     created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     received = RelationRecord(
         relation_id=relation_id,
-        owner_email=DEV_EMAIL,
+        owner_email=owner_email,
         peer_email=peer_email,
         label=label,
         status="pending",
@@ -276,7 +330,7 @@ async def seed_relation(request: Request) -> JSONResponse:
     sent = RelationRecord(
         relation_id=relation_id,
         owner_email=peer_email,
-        peer_email=DEV_EMAIL,
+        peer_email=owner_email,
         label=label,
         status="pending",
         direction="sent",
@@ -285,6 +339,15 @@ async def seed_relation(request: Request) -> JSONResponse:
     _relations_store[(received.owner_email, received.relation_id)] = received
     _relations_store[(sent.owner_email, sent.relation_id)] = sent
     return JSONResponse({"relation_id": relation_id}, status_code=201)
+
+
+@app.post("/test/clear-relations")
+async def clear_relations(request: Request) -> Response:
+    body: dict[str, Any] = await request.json()
+    email = str(body.get("for_email", DEV_EMAIL))
+    for k in [k for k in _relations_store if k[0] == email]:
+        del _relations_store[k]
+    return Response(status_code=204)
 
 
 @app.get("/relations/labels")
@@ -365,11 +428,12 @@ async def clear_log() -> Response:
 @app.post("/test/seed-log-entry")
 async def seed_log_entry(request: Request) -> JSONResponse:
     body: dict[str, Any] = await request.json()
+    owner_email = str(body.get("for_email", DEV_EMAIL))
     entry_id = str(uuid.uuid4())
     logged_at = str(body.get("logged_at", datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")))
     text = str(body.get("text", "seeded entry"))
-    entry = make_entry(entry_id, DEV_EMAIL, text, logged_at)
-    _log_store[(DEV_EMAIL, entry_id)] = entry
+    entry = make_entry(entry_id, owner_email, text, logged_at)
+    _log_store[(owner_email, entry_id)] = entry
     return JSONResponse(to_response_dict(entry), status_code=201)
 
 

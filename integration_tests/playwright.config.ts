@@ -4,6 +4,8 @@ import { defineConfig } from '@playwright/test'
 // these tests. Start it with: cd backend && uv run python dev_server.py
 
 export default defineConfig({
+  globalSetup: './global-setup.ts',
+  globalTeardown: './global-teardown.ts',
   testDir: './tests',
   retries: 0,
   use: {
@@ -17,9 +19,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run dev:e2e',
     cwd: '../frontend',
     port: 5173,
     reuseExistingServer: true,
+    env: {
+      VITE_OAUTH_ISSUER_URL: 'http://localhost:4444',
+      VITE_GOOGLE_CLIENT_ID: 'e2e-client',
+    },
   },
 })

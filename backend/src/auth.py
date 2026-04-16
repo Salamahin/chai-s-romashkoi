@@ -71,7 +71,14 @@ def verify_session_token(
         raise VerificationError(str(e)) from e
 
 
-VALID_ISSUERS = frozenset(["accounts.google.com", "https://accounts.google.com"])
+_DEFAULT_VALID_ISSUERS: frozenset[str] = frozenset(["accounts.google.com", "https://accounts.google.com"])
+
+
+def parse_valid_issuers(raw: str) -> frozenset[str]:
+    stripped = raw.strip()
+    if not stripped:
+        return _DEFAULT_VALID_ISSUERS
+    return frozenset(part.strip() for part in stripped.split(",") if part.strip())
 
 
 @dataclass(frozen=True)
@@ -85,6 +92,7 @@ def verify_google_id_token(
     jwks: JwksPayload,
     expected_audience: str,
     now_utc: int,
+    valid_issuers: frozenset[str],
 ) -> GoogleClaims:
     try:
         jwks_set = PyJWKSet.from_dict(dict(jwks))
@@ -103,7 +111,7 @@ def verify_google_id_token(
         if exp <= now_utc:
             raise VerificationError("Token expired")
         iss = str(payload.get("iss", ""))
-        if iss not in VALID_ISSUERS:
+        if iss not in valid_issuers:
             raise VerificationError(f"Invalid issuer: {iss}")
         return GoogleClaims(
             sub=str(payload["sub"]),
