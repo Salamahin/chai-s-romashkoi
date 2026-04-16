@@ -38,6 +38,9 @@ jobs:
           role-to-assume: arn:aws:iam::978092319422:role/chai-s-romashkoi-deploy
           aws-region: eu-central-1
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Terraform init
         working-directory: deploy
         run: terraform init
