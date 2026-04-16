@@ -19,13 +19,6 @@ jobs:
         working-directory: backend
         run: uv sync --dev
 
-      - name: Start dev backend
-        working-directory: backend
-        run: uv run python -m dev.server &
-
-      - name: Wait for backend
-        run: timeout 30 bash -c 'until curl -s -o /dev/null http://localhost:8000; do sleep 1; done'
-
       - name: Install Node
         uses: actions/setup-node@v4
         with:
