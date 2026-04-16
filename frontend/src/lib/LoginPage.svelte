@@ -49,16 +49,7 @@
 
 <div class="flex min-h-screen items-center justify-center bg-white px-4">
   <div class="w-full max-w-xs text-center">
-    <pre class="mb-6 font-mono text-xs text-gray-700 inline-block text-left leading-tight">(  )   (   )  )
- ) (   )  (  (
- ( )  (    ) )
- _____________
-|             |
-|             |___
-|             |_  |
-\             | | |
- \___________/|_| |
-   |_______|  |___|</pre>
+    <img src="/logo.webp" alt="chai s romashkoi" class="mb-6 mx-auto w-32 h-32 object-contain" />
     <p class="mb-1 font-mono text-sm font-semibold text-gray-800">chai-s-romashkoi</p>
     <p class="mb-6 font-mono text-xs text-gray-400">sign in to continue</p>
     <div class="flex justify-center" bind:this={buttonDiv}></div>
