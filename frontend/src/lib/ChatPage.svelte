@@ -65,12 +65,20 @@
     oldestWeekStart = new Date(weekStart)
 
     try {
-      const [logWindow, homeData] = await Promise.all([
+      const [logResult, homeResult] = await Promise.allSettled([
         listEntries(token, weekStart, weekEnd),
         getHomeData(token),
       ])
-      messages = logWindow.entries.map(entryToMessage)
-      pendingCount = homeData.pending_relations_count
+      if (logResult.status === 'rejected') {
+        const msg = logResult.reason instanceof Error ? logResult.reason.message : String(logResult.reason)
+        if (handleAuthError(msg)) return
+        loadError = msg
+      } else {
+        messages = logResult.value.entries.map(entryToMessage)
+      }
+      if (homeResult.status === 'fulfilled') {
+        pendingCount = homeResult.value.pending_relations_count
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       if (handleAuthError(msg)) return

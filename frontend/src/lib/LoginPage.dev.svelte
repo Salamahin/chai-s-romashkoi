@@ -20,29 +20,21 @@
   }
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-  <div class="w-full max-w-sm rounded-lg border border-gray-200 bg-white px-8 py-10 text-center">
-    <pre class="mb-4 font-mono text-xs leading-tight text-gray-400 text-left inline-block">   * . * . *
-  . \ | / .
-  *-( o )-*
-  . / | \ .
-   * . * . *
-   _________
-  / ~~~~~~~ \
- |           |
-  \_________/</pre>
-    <h1 class="mb-1 text-lg font-semibold text-gray-800 tracking-tight">Chai s Romashkoi</h1>
-    <p class="mb-8 text-sm text-gray-400">Local development</p>
+<div class="flex min-h-screen items-center justify-center bg-white px-4">
+  <div class="w-full max-w-xs text-center">
+    <pre class="mb-8 font-mono text-sm text-gray-800 inline-block text-left leading-relaxed">chai-s-romashkoi
+----------------</pre>
+    <p class="mb-6 font-mono text-xs text-gray-400">local development</p>
 
     <button
       onclick={handleLogin}
-      class="w-full rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+      class="font-mono text-xs rounded border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
     >
-      Login as dev@local.dev
+      login as dev@local.dev
     </button>
 
     {#if error}
-      <p class="mt-4 text-sm text-red-500">{error}</p>
+      <p class="mt-4 font-mono text-xs text-red-500">{error}</p>
     {/if}
   </div>
 </div>
