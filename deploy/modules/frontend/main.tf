@@ -199,6 +199,28 @@ resource "aws_cloudfront_distribution" "this" {
   # Ordered cache behaviours (evaluated before the default behaviour)
   # ---------------------------------------------------------------------------
 
+  # / (exact root) → app handler — caching disabled, response is user-specific
+  ordered_cache_behavior {
+    path_pattern     = "/"
+    target_origin_id = "app-handler"
+
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
   # /auth/* → auth handler — caching disabled so every request reaches Lambda
   ordered_cache_behavior {
     path_pattern     = "/auth/*"
