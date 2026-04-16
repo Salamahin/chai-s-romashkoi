@@ -9,3 +9,9 @@ variable "project_name" {
   type        = string
   default     = "chai-s-romashkoi"
 }
+
+variable "github_repo" {
+  description = "GitHub repository (owner/name) allowed to assume the deploy role via OIDC"
+  type        = string
+  default     = "Salamahin/chai-s-romashkoi"
+}
