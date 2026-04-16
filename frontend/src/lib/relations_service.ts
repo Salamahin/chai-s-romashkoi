@@ -17,7 +17,7 @@ export interface RelationsSnapshot {
 import { assertOk } from './http_utils'
 
 const baseUrl: string =
-  ((import.meta.env.VITE_RELATIONS_API_URL as unknown as string | undefined) ?? 'http://localhost:8000').replace(/\/$/, '')
+  ((import.meta.env.VITE_RELATIONS_API_URL as unknown as string | undefined) ?? '').replace(/\/$/, '')
 
 export async function listRelations(sessionToken: string): Promise<RelationsSnapshot> {
   const res = await fetch(`${baseUrl}/relations`, {

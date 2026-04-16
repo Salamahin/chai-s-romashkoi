@@ -30,6 +30,59 @@ test('chat interface is visible after login', async ({ page }) => {
   await expect(page.locator('textarea').first()).toBeVisible()
 })
 
+test('no HTTP error banner appears after initial load', async ({ page }) => {
+  // If the initial GET /log call fails (e.g. returns 403 or 404) ChatPage renders
+  // a red error banner with the HTTP status. Assert it is absent.
+  await expect(page.getByText(/^HTTP \d{3}$/)).not.toBeVisible()
+})
+
+test('GET /log is called with correct path after login', async ({ page }) => {
+  // Regression: Lambda Function URLs have a trailing slash; concatenating
+  // it with "/log" produced "//log" which AWS rejects with 403.
+  // Re-login from scratch so we can capture the initial request.
+  await page.evaluate(() => sessionStorage.clear())
+
+  const logUrls: string[] = []
+  page.on('request', (req) => {
+    if (req.method() === 'GET' && /^https?:\/\/localhost:8000\/.*log/.test(req.url())) {
+      logUrls.push(req.url())
+    }
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'login as dev@local.dev' }).click()
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+
+  expect(logUrls.length).toBeGreaterThan(0)
+  for (const url of logUrls) {
+    expect(url).not.toMatch(/\/\/log/)
+  }
+})
+
+test('403 on initial log fetch shows an error banner', async ({ page }) => {
+  // Re-login from scratch with the intercept in place so it fires on the
+  // initial ChatPage mount request.
+  // Scope the pattern to the backend origin only — a broad "**/log*" also
+  // matches Vite module requests like /src/lib/log_service.ts and breaks SPA loading.
+  await page.evaluate(() => sessionStorage.clear())
+
+  await page.route('http://localhost:8000/log*', (route) => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'forbidden' }) })
+    } else {
+      route.continue()
+    }
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'login as dev@local.dev' }).click()
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByText('HTTP 403')).toBeVisible()
+})
+
 test('send a message and it appears in the chat', async ({ page }) => {
   await sendMessage(page, 'Hello from test')
   await expect(page.getByText('Hello from test')).toBeVisible()

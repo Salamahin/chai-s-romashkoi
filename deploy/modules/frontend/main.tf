@@ -99,13 +99,13 @@ resource "aws_s3_object" "assets" {
 # Build-time environment variable injection
 # ---------------------------------------------------------------------------
 
-# Write .env.production.local so `vite build` picks up VITE_RELATIONS_API_URL
-# and VITE_LOG_API_URL without committing the values to the repository.
-# The file is gitignored by convention (.env*.local). It is regenerated on
-# every `terraform apply`.
+# In production all API calls use relative paths routed via CloudFront
+# (/log/*, /relations/*, /auth/*, /profile/*), so no VITE_*_API_URL overrides
+# are needed. The local_file resource is kept as a no-op to avoid removing the
+# terraform resource from state; it writes an empty file.
 resource "local_file" "frontend_env" {
   filename        = "${path.module}/../../../frontend/.env.production.local"
-  content         = "VITE_RELATIONS_API_URL=${var.relations_api_url}\nVITE_LOG_API_URL=${var.log_api_url}\n"
+  content         = ""
   file_permission = "0644"
 }
 
