@@ -61,3 +61,52 @@ resource "aws_dynamodb_table" "tf_lock" {
   }
 
 }
+
+# GitHub Actions OIDC provider — allows GitHub Actions workflows to assume AWS
+# roles without storing long-lived AWS credentials as GitHub secrets.
+resource "aws_iam_openid_connect_provider" "github_actions" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = ["sts.amazonaws.com"]
+
+  # Thumbprints for token.actions.githubusercontent.com intermediate CA certs.
+  # Two values provided for rotation resilience.
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a3a8518e8759bf075b76b750d4f2df264fcd",
+  ]
+}
+
+# IAM role assumed by the CD workflow via OIDC.
+# Trust is scoped to this specific repository only (StringLike allows branch/tag/PR wildcards).
+resource "aws_iam_role" "deploy" {
+  name = "${var.project_name}-deploy"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github_actions.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
+          }
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# AdministratorAccess is intentional for a personal project where the deploy
+# role must be able to create/destroy any infrastructure resource.
+resource "aws_iam_role_policy_attachment" "deploy_admin" {
+  role       = aws_iam_role.deploy.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}

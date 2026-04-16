@@ -16,6 +16,8 @@ deploy/.terraform/
 deploy/bootstrap/.terraform/
 deploy/*.tfstate
 deploy/*.tfstate.backup
+deploy/bootstrap/*.tfstate
+deploy/bootstrap/*.tfstate.backup
 deploy/.terraform.lock.hcl
 deploy/bootstrap/.terraform.lock.hcl
 deploy/*.tfplan
