@@ -22,6 +22,9 @@ deploy/.terraform.lock.hcl
 deploy/bootstrap/.terraform.lock.hcl
 deploy/*.tfplan
 
+# Temporary working files (used by agents for staging)
+.tmp/
+
 # OS
 .DS_Store
 

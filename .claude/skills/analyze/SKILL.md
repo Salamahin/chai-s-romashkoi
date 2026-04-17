@@ -39,7 +39,7 @@ Ask each agent to return a list of the 5–10 most relevant files. After they re
 
 ## Step 4 — Produce the analysis document
 
-Write the document to `<number>-<slug>.md` (project root) with the following structure:
+Write the document to `.tmp/<number>-<slug>.md` (never the project root) with the following structure:
 
 ```markdown
 # <Issue number>: <Issue title>
@@ -67,7 +67,7 @@ Keep it concise. Prefer bullet points over prose. Tasks should be atomic enough 
 ## Step 5 — Publish to the GitHub wiki
 
 ```
-bash scripts/publish_adr.sh <number>-<slug>.md
+bash scripts/publish_adr.sh .tmp/<number>-<slug>.md
 ```
 
 This clones the wiki, writes to `adr/<number>-<slug>.md`, commits, pushes, and deletes the local file.

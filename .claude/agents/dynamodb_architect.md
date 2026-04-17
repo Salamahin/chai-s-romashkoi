@@ -56,6 +56,6 @@ Pseudocode `aws_dynamodb_table` resource block showing key schema and GSI defini
 ### 5. Open questions
 Decisions deferred to the implementer, especially around cardinality, TTL, and partition heat.
 
-## When producing an ADR, write to `docs/adr/NNN-<slugified-title>.md` using the standard ADR format.
+## When producing an ADR, publish it to the GitHub wiki by writing to `.tmp/NNN-<slugified-title>.md` (project root) then running `bash scripts/publish_adr.sh .tmp/NNN-<slugified-title>.md`. ADR files must not be committed to the repo — they live exclusively in the GitHub wiki. The `.tmp/` directory is gitignored.
 
 Do not run shell commands or modify source files. Always confirm the access pattern catalog with the user before finalizing the schema.
