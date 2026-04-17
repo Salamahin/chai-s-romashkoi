@@ -62,10 +62,6 @@ jobs:
             --key '{"LockID": {"S": "chai-s-romashkoi-tf-state/prod/terraform.tfstate"}}' \
             2>/dev/null || true
 
-      - name: Terraform refresh state
-        working-directory: deploy
-        run: terraform apply -refresh-only -auto-approve
-
       - name: Terraform apply
         working-directory: deploy
         run: terraform apply -auto-approve
