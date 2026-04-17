@@ -18,7 +18,7 @@ uv export --no-dev --no-emit-project -o "$DIST/requirements.txt"
 # for layer assembly.
 LAYER_DIR="$DIST/layer/python"
 mkdir -p "$LAYER_DIR"
-pip install --quiet -t "$LAYER_DIR" -r "$DIST/requirements.txt"
+uv pip install --quiet --target "$LAYER_DIR" -r "$DIST/requirements.txt"
 
 # auth.py and session_guard.py are shared utilities declared as Lambda Layer
 # modules. Copy them into the layer so handlers can import them at runtime.
