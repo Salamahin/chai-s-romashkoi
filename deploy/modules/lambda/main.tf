@@ -324,11 +324,6 @@ resource "aws_lambda_permission" "log_handler_url_invoker" {
   function_url_auth_type = "NONE"
 }
 
-import {
-  to = aws_lambda_permission.auth_handler_url_invoker
-  id = "chai-s-romashkoi-auth/FunctionURLAllowPublicAccess"
-}
-
 resource "aws_lambda_permission" "auth_handler_url_invoker" {
   statement_id           = "FunctionURLAllowPublicAccess"
   action                 = "lambda:InvokeFunctionUrl"
@@ -337,22 +332,12 @@ resource "aws_lambda_permission" "auth_handler_url_invoker" {
   function_url_auth_type = "NONE"
 }
 
-import {
-  to = aws_lambda_permission.app_handler_url_invoker
-  id = "chai-s-romashkoi-app/FunctionURLAllowPublicAccess"
-}
-
 resource "aws_lambda_permission" "app_handler_url_invoker" {
   statement_id           = "FunctionURLAllowPublicAccess"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.app_handler.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
-}
-
-import {
-  to = aws_lambda_permission.profile_handler_url_invoker
-  id = "chai-s-romashkoi-profile/FunctionURLAllowPublicAccess"
 }
 
 resource "aws_lambda_permission" "profile_handler_url_invoker" {
