@@ -85,8 +85,11 @@ export function clearSession(): void {
   localStorage.removeItem(SESSION_KEY)
 }
 
+let _gsiLoad: Promise<void> | null = null
+
 function loadGsiScript(): Promise<void> {
-  return new Promise((resolve) => {
+  if (_gsiLoad) return _gsiLoad
+  _gsiLoad = new Promise((resolve, reject) => {
     if (document.querySelector('script[src*="gsi/client"]')) {
       resolve()
       return
@@ -96,8 +99,10 @@ function loadGsiScript(): Promise<void> {
     script.async = true
     script.defer = true
     script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load GSI script'))
     document.head.appendChild(script)
   })
+  return _gsiLoad
 }
 
 export function silentRefresh(onSuccess: () => void, onFailure: () => void): void {

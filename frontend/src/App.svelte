@@ -6,8 +6,8 @@
   type AuthState = 'authenticated' | 'unauthenticated' | 'refreshing'
 
   function initialAuthState(): AuthState {
-    if (getSessionToken() !== null) return 'authenticated'
     if (isSessionStale()) return 'refreshing'
+    if (getSessionToken() !== null) return 'authenticated'
     return 'unauthenticated'
   }
 
