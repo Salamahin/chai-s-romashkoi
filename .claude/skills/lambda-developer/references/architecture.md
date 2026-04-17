@@ -9,6 +9,8 @@ Browser
 CloudFront distribution
   ├── /auth/*         → auth Lambda Function URL
   ├── /profile*       → profile Lambda Function URL
+  ├── /relations*     → relations Lambda Function URL
+  ├── /log*           → log Lambda Function URL
   └── /*  (default)   → app Lambda Function URL
 
 Each Lambda Function URL:
@@ -33,8 +35,10 @@ Every Lambda has the layer attached. Handlers import from these as top-level mod
 | `auth-handler` | `auth_handler.handler` | `POST /auth/session` |
 | `app-handler` | `app.handler.handler` | `GET /` |
 | `profile-handler` | `profile.handler.handler` | `GET /profile`, `PUT /profile`, `GET /profile/tags` |
+| `relations-handler` | `relations.handler.handler` | `GET/POST /relations`, `POST /relations/{id}/confirm`, `DELETE /relations/{id}`, `GET /relations/labels` |
+| `log-handler` | `log.handler.handler` | `GET /log`, `POST /log`, `PUT /log/{entry_id}`, `DELETE /log/{entry_id}` |
 
-Each handler is **standalone** — it reads its own env vars, constructs its own clients, and handles its own routing. There is no shared dispatcher; routing happens at CloudFront.
+Each handler is **standalone** — it reads its own env vars, constructs its own clients, and handles its own routing. There is no shared dispatcher in prod; routing happens at CloudFront.
 
 ## CloudFront path routing
 
@@ -45,19 +49,23 @@ CloudFront uses ordered cache behaviors:
 | `/auth/*` | auth Lambda Function URL | `POST /auth/session` hits here |
 | `/profile` | profile Lambda Function URL | exact path |
 | `/profile/*` | profile Lambda Function URL | sub-paths |
+| `/relations` | relations Lambda Function URL | exact path |
+| `/relations/*` | relations Lambda Function URL | sub-paths |
+| `/log` | log Lambda Function URL | exact path |
+| `/log/*` | log Lambda Function URL | sub-paths |
 | `/*` (default) | app Lambda Function URL | catch-all |
 
 CloudFront is also the origin for the frontend static assets (S3).
 
 ## Environment variables per Lambda
 
-| Variable | auth | app | profile |
-|---|---|---|---|
-| `SESSION_SECRET` | ✓ | ✓ | ✓ |
-| `JWKS_URL` | ✓ | — | — |
-| `GOOGLE_CLIENT_ID` | ✓ | — | — |
-| `SESSION_TTL_SECONDS` | ✓ | — | — |
-| `PROFILES_TABLE_NAME` | — | — | ✓ |
+| Variable | auth | app | profile | relations | log |
+|---|---|---|---|---|---|
+| `SESSION_SECRET` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `JWKS_URL` | ✓ | — | — | — | — |
+| `GOOGLE_CLIENT_ID` | ✓ | — | — | — | — |
+| `SESSION_TTL_SECONDS` | ✓ | — | — | — | — |
+| `PROFILES_TABLE_NAME` | — | ✓ | ✓ | ✓ | ✓ |
 
 ## Cost profile
 
