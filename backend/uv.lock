@@ -39,6 +39,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "cachetools" },
+    { name = "cryptography" },
     { name = "pyjwt" },
 ]
 
@@ -59,6 +60,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cachetools", specifier = ">=7.0.5" },
+    { name = "cryptography", specifier = ">=44.0.0" },
     { name = "pyjwt", extras = ["cryptography"], specifier = ">=2.12.1" },
 ]
 
