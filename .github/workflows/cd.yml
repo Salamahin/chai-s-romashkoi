@@ -13,6 +13,15 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
+      TF_VAR_layer_zip_path: ../backend/dist/layer.zip
+      TF_VAR_auth_zip_path: ../backend/dist/auth.zip
+      TF_VAR_app_zip_path: ../backend/dist/app.zip
+      TF_VAR_profile_zip_path: ../backend/dist/profile.zip
+      TF_VAR_relations_zip_path: ../backend/dist/relations.zip
+      TF_VAR_log_zip_path: ../backend/dist/log.zip
     steps:
       - uses: actions/checkout@v4
 
@@ -52,15 +61,6 @@ jobs:
 
       - name: Terraform apply
         working-directory: deploy
-        env:
-          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
-          TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
-          TF_VAR_layer_zip_path: ../backend/dist/layer.zip
-          TF_VAR_auth_zip_path: ../backend/dist/auth.zip
-          TF_VAR_app_zip_path: ../backend/dist/app.zip
-          TF_VAR_profile_zip_path: ../backend/dist/profile.zip
-          TF_VAR_relations_zip_path: ../backend/dist/relations.zip
-          TF_VAR_log_zip_path: ../backend/dist/log.zip
         run: terraform apply -auto-approve
 
       - name: Read Terraform outputs
