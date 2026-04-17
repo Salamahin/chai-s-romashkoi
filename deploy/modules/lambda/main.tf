@@ -306,6 +306,10 @@ resource "aws_lambda_function_url" "log_handler" {
 # ---------------------------------------------------------------------------
 # Lambda permissions — allow Function URL invoker (anonymous HTTP) to call
 # each function. Required when authorization_type = "NONE".
+#
+# Two statements are required per function since October 2025:
+#   1. lambda:InvokeFunctionUrl  — allows the Function URL endpoint itself
+#   2. lambda:InvokeFunction     — allows the underlying invocation via URL
 # ---------------------------------------------------------------------------
 
 resource "aws_lambda_permission" "relations_handler_url_invoker" {
@@ -314,6 +318,21 @@ resource "aws_lambda_permission" "relations_handler_url_invoker" {
   function_name          = aws_lambda_function.relations_handler.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
+
+  lifecycle {
+    replace_triggered_by = [
+      aws_lambda_function.relations_handler,
+      aws_lambda_function_url.relations_handler,
+    ]
+  }
+}
+
+resource "aws_lambda_permission" "relations_handler_invoke" {
+  statement_id             = "FunctionURLInvokeAllowPublicAccess"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.relations_handler.function_name
+  principal                = "*"
+  invoked_via_function_url = true
 
   lifecycle {
     replace_triggered_by = [
@@ -338,12 +357,42 @@ resource "aws_lambda_permission" "log_handler_url_invoker" {
   }
 }
 
+resource "aws_lambda_permission" "log_handler_invoke" {
+  statement_id             = "FunctionURLInvokeAllowPublicAccess"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.log_handler.function_name
+  principal                = "*"
+  invoked_via_function_url = true
+
+  lifecycle {
+    replace_triggered_by = [
+      aws_lambda_function.log_handler,
+      aws_lambda_function_url.log_handler,
+    ]
+  }
+}
+
 resource "aws_lambda_permission" "auth_handler_url_invoker" {
   statement_id           = "FunctionURLAllowPublicAccess3"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.auth_handler.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
+
+  lifecycle {
+    replace_triggered_by = [
+      aws_lambda_function.auth_handler,
+      aws_lambda_function_url.auth_handler,
+    ]
+  }
+}
+
+resource "aws_lambda_permission" "auth_handler_invoke" {
+  statement_id             = "FunctionURLInvokeAllowPublicAccess"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.auth_handler.function_name
+  principal                = "*"
+  invoked_via_function_url = true
 
   lifecycle {
     replace_triggered_by = [
@@ -368,12 +417,42 @@ resource "aws_lambda_permission" "app_handler_url_invoker" {
   }
 }
 
+resource "aws_lambda_permission" "app_handler_invoke" {
+  statement_id             = "FunctionURLInvokeAllowPublicAccess"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.app_handler.function_name
+  principal                = "*"
+  invoked_via_function_url = true
+
+  lifecycle {
+    replace_triggered_by = [
+      aws_lambda_function.app_handler,
+      aws_lambda_function_url.app_handler,
+    ]
+  }
+}
+
 resource "aws_lambda_permission" "profile_handler_url_invoker" {
   statement_id           = "FunctionURLAllowPublicAccess3"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.profile_handler.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
+
+  lifecycle {
+    replace_triggered_by = [
+      aws_lambda_function.profile_handler,
+      aws_lambda_function_url.profile_handler,
+    ]
+  }
+}
+
+resource "aws_lambda_permission" "profile_handler_invoke" {
+  statement_id             = "FunctionURLInvokeAllowPublicAccess"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.profile_handler.function_name
+  principal                = "*"
+  invoked_via_function_url = true
 
   lifecycle {
     replace_triggered_by = [
