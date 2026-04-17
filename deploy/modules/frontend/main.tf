@@ -105,7 +105,7 @@ resource "aws_s3_object" "assets" {
 # terraform resource from state; it writes an empty file.
 resource "local_file" "frontend_env" {
   filename        = "${path.module}/../../../frontend/.env.production.local"
-  content         = ""
+  content         = "VITE_API_URL=\nVITE_LOG_API_URL=\nVITE_RELATIONS_API_URL=\n"
   file_permission = "0644"
 }
 
