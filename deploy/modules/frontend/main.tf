@@ -110,6 +110,27 @@ resource "local_file" "frontend_env" {
 }
 
 # ---------------------------------------------------------------------------
+# CloudFront response headers policy
+# ---------------------------------------------------------------------------
+
+# AWS Lambda Function URLs inject Cross-Origin-Opener-Policy: same-origin into
+# every response. When the page document is served from a Lambda origin,
+# COOP: same-origin severs the cross-origin opener relationship and blocks
+# Google Sign-In's popup from posting credentials back via window.opener.
+# Overriding to unsafe-none at the CloudFront layer restores that relationship.
+resource "aws_cloudfront_response_headers_policy" "no_coop" {
+  name = "${var.project_name}-no-coop"
+
+  custom_headers_config {
+    items {
+      header   = "Cross-Origin-Opener-Policy"
+      value    = "unsafe-none"
+      override = true
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------
 # CloudFront distribution
 # ---------------------------------------------------------------------------
 
@@ -212,6 +233,9 @@ resource "aws_cloudfront_distribution" "this" {
     default_ttl = 0
     max_ttl     = 0
 
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
+
     forwarded_values {
       query_string = true
       # Do NOT include Host — Lambda Function URLs reject requests where Host
@@ -236,6 +260,9 @@ resource "aws_cloudfront_distribution" "this" {
     default_ttl = 0
     max_ttl     = 0
 
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
+
     forwarded_values {
       query_string = true
       headers      = ["Authorization", "Content-Type"]
@@ -257,6 +284,9 @@ resource "aws_cloudfront_distribution" "this" {
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
+
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
 
     forwarded_values {
       query_string = true
@@ -280,6 +310,9 @@ resource "aws_cloudfront_distribution" "this" {
     default_ttl = 0
     max_ttl     = 0
 
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
+
     forwarded_values {
       query_string = true
       headers      = ["Authorization", "Content-Type"]
@@ -301,6 +334,9 @@ resource "aws_cloudfront_distribution" "this" {
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
+
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
 
     forwarded_values {
       query_string = true
@@ -324,6 +360,9 @@ resource "aws_cloudfront_distribution" "this" {
     default_ttl = 0
     max_ttl     = 0
 
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
+
     forwarded_values {
       query_string = true
       headers      = ["Authorization", "Content-Type"]
@@ -345,6 +384,9 @@ resource "aws_cloudfront_distribution" "this" {
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
+
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
 
     forwarded_values {
       query_string = true
@@ -368,6 +410,9 @@ resource "aws_cloudfront_distribution" "this" {
     default_ttl = 0
     max_ttl     = 0
 
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
+
     forwarded_values {
       query_string = true
       headers      = ["Authorization", "Content-Type"]
@@ -386,6 +431,9 @@ resource "aws_cloudfront_distribution" "this" {
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
+
+    # Override Lambda-injected COOP header so Google Sign-In popup can post back.
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.no_coop.id
 
     forwarded_values {
       query_string = false
