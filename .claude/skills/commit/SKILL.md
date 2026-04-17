@@ -36,9 +36,13 @@ If you decided to leave some files unstaged, briefly tell the user which ones an
 
 Review all staged changes (`git diff --cached`) and the recent log for style.
 
+**Closing reference**: parse the current branch name for a leading issue number (e.g. `025_some-slug` → `#25`). Check `git log --oneline` for the branch's commits against main:
+- If this is the **first commit** on the branch (no prior commits beyond the branch point), append `Closes #NN` to the commit body.
+- If commits already exist on this branch, omit the closing reference — it was already included in the first commit.
+
 Compose a message:
 - **Subject line**: imperative mood, ≤72 chars, no trailing period
-- **Body** (optional): add only if the subject alone is insufficient — explain *why*, not *what*
+- **Body** (optional): add only if the subject alone is insufficient — explain *why*, not *what*; append `Closes #NN` here when required (see above)
 - Follow the style of recent commits in this repo
 
 ## Step 4 — Commit
