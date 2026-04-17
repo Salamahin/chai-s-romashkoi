@@ -55,6 +55,13 @@ jobs:
         working-directory: deploy
         run: terraform init
 
+      - name: Clear stale Terraform state lock
+        run: |
+          aws dynamodb delete-item \
+            --table-name chai-s-romashkoi-tf-lock \
+            --key '{"LockID": {"S": "chai-s-romashkoi-tf-state/prod/terraform.tfstate"}}' \
+            2>/dev/null || true
+
       - name: Terraform refresh state
         working-directory: deploy
         run: terraform apply -refresh-only -auto-approve
