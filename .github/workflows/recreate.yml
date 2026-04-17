@@ -74,6 +74,9 @@ jobs:
             --key '{"LockID": {"S": "chai-s-romashkoi-tf-state/prod/terraform.tfstate"}}' \
             2>/dev/null || true
 
+      - name: Allow DynamoDB table destruction (runner-local, not committed)
+        run: sed -i 's/prevent_destroy = true/prevent_destroy = false/' deploy/modules/lambda/main.tf
+
       - name: Terraform destroy
         working-directory: deploy
         run: terraform destroy -auto-approve
