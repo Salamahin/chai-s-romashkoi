@@ -9,12 +9,13 @@ export interface ProfileSnapshot {
   entries: ProfileEntry[]
 }
 
-import { assertOk } from './http_utils'
+import { assertOk, tracedFetch } from './http_utils'
 
-const apiUrl = import.meta.env.VITE_API_URL as string
+const apiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
+console.log('[profile] VITE_API_URL =', apiUrl || '(empty → relative paths)')
 
 export async function getProfile(sessionToken: string): Promise<ProfileSnapshot> {
-  const res = await fetch(`${apiUrl}/profile`, {
+  const res = await tracedFetch(`${apiUrl}/profile`, {
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
   await assertOk(res)
@@ -25,7 +26,7 @@ export async function saveProfile(
   sessionToken: string,
   snapshot: ProfileSnapshot,
 ): Promise<ProfileSnapshot> {
-  const res = await fetch(`${apiUrl}/profile`, {
+  const res = await tracedFetch(`${apiUrl}/profile`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${sessionToken}`,
@@ -38,7 +39,7 @@ export async function saveProfile(
 }
 
 export async function getKnownTags(sessionToken: string): Promise<string[]> {
-  const res = await fetch(`${apiUrl}/profile/tags`, {
+  const res = await tracedFetch(`${apiUrl}/profile/tags`, {
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
   await assertOk(res)

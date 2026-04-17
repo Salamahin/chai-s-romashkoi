@@ -14,13 +14,14 @@ export interface RelationsSnapshot {
   relations: RelationRecord[]
 }
 
-import { assertOk } from './http_utils'
+import { assertOk, tracedFetch } from './http_utils'
 
 const baseUrl: string =
   ((import.meta.env.VITE_RELATIONS_API_URL as unknown as string | undefined) ?? '').replace(/\/$/, '')
+console.log('[relations] VITE_RELATIONS_API_URL =', baseUrl || '(empty → relative paths)')
 
 export async function listRelations(sessionToken: string): Promise<RelationsSnapshot> {
-  const res = await fetch(`${baseUrl}/relations`, {
+  const res = await tracedFetch(`${baseUrl}/relations`, {
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
   await assertOk(res)
@@ -32,7 +33,7 @@ export async function sendRelation(
   recipientEmail: string,
   label: string,
 ): Promise<RelationRecord> {
-  const res = await fetch(`${baseUrl}/relations`, {
+  const res = await tracedFetch(`${baseUrl}/relations`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${sessionToken}`,
@@ -48,7 +49,7 @@ export async function confirmRelation(
   sessionToken: string,
   relationId: string,
 ): Promise<RelationRecord> {
-  const res = await fetch(`${baseUrl}/relations/${relationId}/confirm`, {
+  const res = await tracedFetch(`${baseUrl}/relations/${relationId}/confirm`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
@@ -57,7 +58,7 @@ export async function confirmRelation(
 }
 
 export async function deleteRelation(sessionToken: string, relationId: string): Promise<void> {
-  const res = await fetch(`${baseUrl}/relations/${relationId}`, {
+  const res = await tracedFetch(`${baseUrl}/relations/${relationId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
@@ -65,7 +66,7 @@ export async function deleteRelation(sessionToken: string, relationId: string): 
 }
 
 export async function getKnownLabels(sessionToken: string): Promise<string[]> {
-  const res = await fetch(`${baseUrl}/relations/labels`, {
+  const res = await tracedFetch(`${baseUrl}/relations/labels`, {
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
   await assertOk(res)

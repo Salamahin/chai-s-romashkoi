@@ -14,8 +14,6 @@
 #       6. log Lambda Function URL — routed for /log and /log/*
 #   Cache behaviours are evaluated in declaration order; the default falls
 #   through to S3 for everything not matched by an ordered behaviour.
-#   - A local_file writing frontend/.env.production.local with VITE_RELATIONS_API_URL
-#     and VITE_LOG_API_URL so vite build picks them up without committing secrets to the repo.
 #
 # Cost: CloudFront free tier covers 10M requests/month. S3 storage and
 # request costs are negligible for a small SPA. No hourly charges.
@@ -93,20 +91,6 @@ resource "aws_s3_object" "assets" {
   source       = "${var.dist_path}/${each.value}"
   content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), "application/octet-stream")
   etag         = filemd5("${var.dist_path}/${each.value}")
-}
-
-# ---------------------------------------------------------------------------
-# Build-time environment variable injection
-# ---------------------------------------------------------------------------
-
-# In production all API calls use relative paths routed via CloudFront
-# (/log/*, /relations/*, /auth/*, /profile/*), so no VITE_*_API_URL overrides
-# are needed. The local_file resource is kept as a no-op to avoid removing the
-# terraform resource from state; it writes an empty file.
-resource "local_file" "frontend_env" {
-  filename        = "${path.module}/../../../frontend/.env.production.local"
-  content         = "VITE_API_URL=\nVITE_LOG_API_URL=\nVITE_RELATIONS_API_URL=\n"
-  file_permission = "0644"
 }
 
 # ---------------------------------------------------------------------------

@@ -1,3 +1,5 @@
+import { tracedFetch } from './http_utils'
+
 const SESSION_KEY = 'session'
 
 interface StoredSession {
@@ -20,9 +22,11 @@ export function storeSessionToken(raw: string): void {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
 }
 
+const _authApiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
+console.log('[auth] VITE_API_URL =', _authApiUrl || '(empty → relative paths)')
+
 export async function exchangeToken(googleIdToken: string): Promise<void> {
-  const apiUrl = import.meta.env.VITE_API_URL as string
-  const res = await fetch(`${apiUrl}/auth/session`, {
+  const res = await tracedFetch(`${_authApiUrl}/auth/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ credential: googleIdToken }),

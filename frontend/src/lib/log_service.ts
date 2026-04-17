@@ -1,7 +1,8 @@
-import { assertOk } from './http_utils'
+import { assertOk, tracedFetch } from './http_utils'
 
 const apiUrl: string =
   ((import.meta.env.VITE_LOG_API_URL as string | undefined) ?? '').replace(/\/$/, '')
+console.log('[log] VITE_LOG_API_URL =', apiUrl || '(empty → relative paths)')
 
 export interface LogEntry {
   entry_id: string
@@ -19,10 +20,8 @@ export async function listEntries(
   weekStart: string,
   weekEnd: string,
 ): Promise<LogWindow> {
-  const url = new URL(`${apiUrl}/log`)
-  url.searchParams.set('week_start', weekStart)
-  url.searchParams.set('week_end', weekEnd)
-  const res = await fetch(url.toString(), {
+  const qs = `?week_start=${encodeURIComponent(weekStart)}&week_end=${encodeURIComponent(weekEnd)}`
+  const res = await tracedFetch(`${apiUrl}/log${qs}`, {
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
   await assertOk(res)
@@ -30,7 +29,7 @@ export async function listEntries(
 }
 
 export async function createEntry(sessionToken: string, text: string): Promise<LogEntry> {
-  const res = await fetch(`${apiUrl}/log`, {
+  const res = await tracedFetch(`${apiUrl}/log`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
@@ -44,7 +43,7 @@ export async function editEntry(
   entryId: string,
   text: string,
 ): Promise<LogEntry> {
-  const res = await fetch(`${apiUrl}/log/${entryId}`, {
+  const res = await tracedFetch(`${apiUrl}/log/${entryId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
@@ -54,7 +53,7 @@ export async function editEntry(
 }
 
 export async function deleteEntry(sessionToken: string, entryId: string): Promise<void> {
-  const res = await fetch(`${apiUrl}/log/${entryId}`, {
+  const res = await tracedFetch(`${apiUrl}/log/${entryId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${sessionToken}` },
   })
