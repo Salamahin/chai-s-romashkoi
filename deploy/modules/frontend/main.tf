@@ -214,7 +214,9 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = true
-      headers      = ["*"]
+      # Do NOT include Host — Lambda Function URLs reject requests where Host
+      # doesn't match their own domain, returning 403.
+      headers = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
@@ -230,14 +232,13 @@ resource "aws_cloudfront_distribution" "this" {
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
 
-    # TTL 0 effectively disables caching — required for auth endpoints.
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
 
     forwarded_values {
       query_string = true
-      headers      = ["*"] # forward all headers so auth tokens reach Lambda
+      headers      = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
@@ -259,7 +260,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = true
-      headers      = ["*"]
+      headers      = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
@@ -281,7 +282,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = true
-      headers      = ["*"]
+      headers      = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
@@ -303,7 +304,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = true
-      headers      = ["*"]
+      headers      = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
@@ -325,7 +326,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = true
-      headers      = ["*"]
+      headers      = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
@@ -347,7 +348,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = true
-      headers      = ["*"]
+      headers      = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
@@ -369,7 +370,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = true
-      headers      = ["*"]
+      headers      = ["Authorization", "Content-Type"]
       cookies {
         forward = "all"
       }
