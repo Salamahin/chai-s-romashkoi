@@ -5,6 +5,7 @@
   import { getSessionToken, clearSession } from './auth_service'
   import { getProfile, saveProfile, getKnownTags } from './profile_service'
   import type { ProfileEntry as ApiEntry } from './profile_service'
+  import { cache, refreshProfile } from './app_cache.svelte'
   import RelationsPanel from './RelationsPanel.svelte'
 
   interface Props {
@@ -41,14 +42,30 @@
       return
     }
     token = t
-    try {
-      const [snapshot, tags] = await Promise.all([getProfile(t), getKnownTags(t)])
-      entries = snapshot.entries.map(toUiEntry)
-      knownTags = tags
+
+    if (cache.profile !== null) {
+      // Cache hit — seed immediately, no spinner
+      entries = cache.profile.entries.map(toUiEntry)
+      knownTags = cache.knownTags
       loadState = 'ready'
-    } catch (e) {
-      errorMessage = e instanceof Error ? e.message : String(e)
-      loadState = 'error'
+      // Background refresh — errors silently swallowed inside refreshProfile
+      void refreshProfile(t).then(() => {
+        if (cache.profile !== null) {
+          entries = cache.profile.entries.map(toUiEntry)
+          knownTags = cache.knownTags
+        }
+      })
+    } else {
+      // Cache miss — fetch directly and surface errors
+      try {
+        const [snapshot, tags] = await Promise.all([getProfile(t), getKnownTags(t)])
+        entries = snapshot.entries.map(toUiEntry)
+        knownTags = tags
+        loadState = 'ready'
+      } catch (e) {
+        errorMessage = e instanceof Error ? e.message : String(e)
+        loadState = 'error'
+      }
     }
   })
 

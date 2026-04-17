@@ -9,6 +9,7 @@
     getKnownLabels,
   } from './relations_service'
   import type { RelationsSnapshot, RelationRecord } from './relations_service'
+  import { cache, refreshRelations } from './app_cache.svelte'
   import RelationRow from './RelationRow.svelte'
   import LabelCombobox from './LabelCombobox.svelte'
 
@@ -50,6 +51,13 @@
     return false
   }
 
+  function seedFromCache(): void {
+    if (cache.relations !== null) {
+      snapshot = cache.relations
+      knownLabels = cache.knownLabels
+    }
+  }
+
   async function loadData(): Promise<void> {
     loading = true
     error = null
@@ -70,18 +78,32 @@
   }
 
   onMount(() => {
-    void loadData()
+    if (cache.relations !== null) {
+      // Cache hit — seed immediately, no spinner
+      seedFromCache()
+      loading = false
+      // Background refresh — errors silently swallowed inside refreshRelations
+      void refreshRelations(sessionToken).then(() => {
+        seedFromCache()
+      })
+    } else {
+      // Cache miss — fetch directly and surface errors
+      void loadData()
+    }
   })
 
   async function handleConfirm(relationId: string): Promise<void> {
     try {
       await confirmRelation(sessionToken, relationId)
-      await loadData()
     } catch (e) {
       if (!handle401(e)) {
         error = e instanceof Error ? e.message : String(e)
+        return
       }
     }
+    void refreshRelations(sessionToken).then(() => {
+      seedFromCache()
+    })
   }
 
   async function handleDelete(relationId: string): Promise<void> {
@@ -91,9 +113,10 @@
       if (!handle401(e)) {
         error = e instanceof Error ? e.message : String(e)
       }
-    } finally {
-      await loadData()
     }
+    void refreshRelations(sessionToken).then(() => {
+      seedFromCache()
+    })
   }
 
   async function handleSend(): Promise<void> {
@@ -104,14 +127,17 @@
       await sendRelation(sessionToken, sendEmail.trim(), sendLabel.trim())
       sendEmail = ''
       sendLabel = ''
-      await loadData()
     } catch (e) {
       if (!handle401(e)) {
         sendError = e instanceof Error ? e.message : String(e)
       }
-    } finally {
       sending = false
+      return
     }
+    sending = false
+    void refreshRelations(sessionToken).then(() => {
+      seedFromCache()
+    })
   }
 </script>
 
