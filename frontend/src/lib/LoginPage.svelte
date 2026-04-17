@@ -2,7 +2,7 @@
   declare const google: {
     accounts: {
       id: {
-        initialize(config: { client_id: string; callback: (r: { credential: string }) => void }): void
+        initialize(config: { client_id: string; callback: (r: { credential: string }) => void; auto_select?: boolean }): void
         renderButton(el: HTMLElement, opts: { theme: string; size: string }): void
       }
     }
@@ -36,6 +36,7 @@
     if (!scriptReady || !buttonDiv) return
     google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
+      auto_select: true,
       callback: ({ credential }) => {
         loginError = null
         exchangeToken(credential).then(onauthenticated).catch((err) => {

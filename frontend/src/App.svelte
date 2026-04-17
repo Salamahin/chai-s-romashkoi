@@ -1,13 +1,32 @@
 <script lang="ts">
-  import { getSessionToken, clearSession } from './lib/auth_service'
+  import { getSessionToken, clearSession, isSessionStale, silentRefresh } from './lib/auth_service'
   import LoginPage from './lib/LoginPage.svelte'
   import ChatPage from './lib/ChatPage.svelte'
 
-  let authenticated = $state(getSessionToken() !== null)
+  type AuthState = 'authenticated' | 'unauthenticated' | 'refreshing'
+
+  function initialAuthState(): AuthState {
+    if (getSessionToken() !== null) return 'authenticated'
+    if (isSessionStale()) return 'refreshing'
+    return 'unauthenticated'
+  }
+
+  let authState = $state<AuthState>(initialAuthState())
+
+  $effect(() => {
+    if (authState === 'refreshing') {
+      silentRefresh(
+        () => { authState = 'authenticated' },
+        () => { authState = 'unauthenticated' },
+      )
+    }
+  })
 </script>
 
-{#if authenticated}
-  <ChatPage onclearauth={() => { clearSession(); authenticated = false }} />
+{#if authState === 'authenticated'}
+  <ChatPage onclearauth={() => { clearSession(); authState = 'unauthenticated' }} />
+{:else if authState === 'refreshing'}
+  <!-- silent refresh in progress, render nothing -->
 {:else}
-  <LoginPage onauthenticated={() => { authenticated = true }} />
+  <LoginPage onauthenticated={() => { authState = 'authenticated' }} />
 {/if}

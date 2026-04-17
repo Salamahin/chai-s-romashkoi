@@ -7,6 +7,22 @@ interface StoredSession {
   expiresAtMs: number
 }
 
+declare const google: {
+  accounts: {
+    id: {
+      initialize(config: {
+        client_id: string
+        callback: (r: { credential: string }) => void
+        auto_select?: boolean
+      }): void
+      prompt(momentListener: (notification: {
+        isNotDisplayed(): boolean
+        isSkippedMoment(): boolean
+      }) => void): void
+    }
+  }
+}
+
 function decodeExp(token: string): number {
   const parts = token.split('.')
   if (parts.length !== 3) return 0
@@ -19,7 +35,7 @@ export function storeSessionToken(raw: string): void {
     raw,
     expiresAtMs: decodeExp(raw),
   }
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
 }
 
 const _authApiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
@@ -39,21 +55,63 @@ export async function exchangeToken(googleIdToken: string): Promise<void> {
 }
 
 export function getSessionToken(): string | null {
-  const raw = sessionStorage.getItem(SESSION_KEY)
+  const raw = localStorage.getItem(SESSION_KEY)
   if (!raw) return null
   try {
     const session = JSON.parse(raw) as StoredSession
     if (session.expiresAtMs <= Date.now()) {
-      sessionStorage.removeItem(SESSION_KEY)
+      localStorage.removeItem(SESSION_KEY)
       return null
     }
     return session.raw
   } catch {
-    sessionStorage.removeItem(SESSION_KEY)
+    localStorage.removeItem(SESSION_KEY)
     return null
   }
 }
 
+export function isSessionStale(): boolean {
+  const raw = localStorage.getItem(SESSION_KEY)
+  if (!raw) return false
+  try {
+    const session = JSON.parse(raw) as StoredSession
+    return session.expiresAtMs <= Date.now()
+  } catch {
+    return false
+  }
+}
+
 export function clearSession(): void {
-  sessionStorage.removeItem(SESSION_KEY)
+  localStorage.removeItem(SESSION_KEY)
+}
+
+function loadGsiScript(): Promise<void> {
+  return new Promise((resolve) => {
+    if (document.querySelector('script[src*="gsi/client"]')) {
+      resolve()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = () => resolve()
+    document.head.appendChild(script)
+  })
+}
+
+export function silentRefresh(onSuccess: () => void, onFailure: () => void): void {
+  loadGsiScript().then(() => {
+    google.accounts.id.initialize({
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
+      callback: ({ credential }) => {
+        exchangeToken(credential).then(onSuccess).catch(onFailure)
+      },
+    })
+    google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        onFailure()
+      }
+    })
+  }).catch(onFailure)
 }
