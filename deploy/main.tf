@@ -39,21 +39,6 @@ module "lambda" {
   session_secret      = var.session_secret
 }
 
-import {
-  to = module.lambda.aws_lambda_permission.auth_handler_url_invoker
-  id = "chai-s-romashkoi-auth/FunctionURLAllowPublicAccess"
-}
-
-import {
-  to = module.lambda.aws_lambda_permission.app_handler_url_invoker
-  id = "chai-s-romashkoi-app/FunctionURLAllowPublicAccess"
-}
-
-import {
-  to = module.lambda.aws_lambda_permission.profile_handler_url_invoker
-  id = "chai-s-romashkoi-profile/FunctionURLAllowPublicAccess"
-}
-
 module "frontend" {
   source               = "./modules/frontend"
   project_name         = var.project_name

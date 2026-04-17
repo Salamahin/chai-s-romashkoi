@@ -46,6 +46,10 @@ jobs:
         working-directory: deploy
         run: terraform init
 
+      - name: Terraform refresh state
+        working-directory: deploy
+        run: terraform apply -refresh-only -auto-approve
+
       - name: Terraform apply
         working-directory: deploy
         env:
