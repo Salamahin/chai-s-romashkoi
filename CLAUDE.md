@@ -1,6 +1,8 @@
 # Rules
 
 * Never read, write, or search files outside the project root directory. This is strictly prohibited.
+* Always use `uv run` for Python commands in `backend/` (e.g. `uv run pytest`, `uv run ruff`, `uv run mypy`) — never `python3 -m` or bare `python`.
+* Infrastructure resources managed by Terraform must be changed via Terraform config and the CD pipeline, not direct `aws` CLI writes. Read-only CLI calls (describe, get, list) are fine for diagnosis; fixes go through Terraform.
 
 # Constitution
 
