@@ -26,7 +26,7 @@
 {#if authState === 'authenticated'}
   <ChatPage onclearauth={() => { clearSession(); authState = 'unauthenticated' }} />
 {:else if authState === 'refreshing'}
-  <!-- silent refresh in progress, render nothing -->
+  <div class="flex h-screen items-center justify-center text-gray-400">Signing in…</div>
 {:else}
   <LoginPage onauthenticated={() => { authState = 'authenticated' }} />
 {/if}

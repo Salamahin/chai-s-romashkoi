@@ -99,20 +99,25 @@ function loadGsiScript(): Promise<void> {
     script.async = true
     script.defer = true
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Failed to load GSI script'))
+    script.onerror = () => { _gsiLoad = null; reject(new Error('Failed to load GSI script')) }
     document.head.appendChild(script)
   })
   return _gsiLoad
 }
 
+let _gsiInitialized = false
+
 export function silentRefresh(onSuccess: () => void, onFailure: () => void): void {
   loadGsiScript().then(() => {
-    google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
-      callback: ({ credential }) => {
-        exchangeToken(credential).then(onSuccess).catch(onFailure)
-      },
-    })
+    if (!_gsiInitialized) {
+      google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
+        callback: ({ credential }) => {
+          exchangeToken(credential).then(onSuccess).catch(onFailure)
+        },
+      })
+      _gsiInitialized = true
+    }
     google.accounts.id.prompt((notification) => {
       if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
         onFailure()
