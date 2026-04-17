@@ -9,6 +9,7 @@
     getKnownLabels,
   } from './relations_service'
   import type { RelationsSnapshot, RelationRecord } from './relations_service'
+  import { cache, refreshRelations } from './app_cache.svelte'
   import RelationRow from './RelationRow.svelte'
   import LabelCombobox from './LabelCombobox.svelte'
 
@@ -50,6 +51,19 @@
     return false
   }
 
+  function seedFromCache(): void {
+    if (cache.relations !== null) {
+      snapshot = cache.relations
+      knownLabels = cache.knownLabels
+    }
+  }
+
+  function backgroundRefresh(): void {
+    void refreshRelations(sessionToken).then(() => {
+      seedFromCache()
+    })
+  }
+
   async function loadData(): Promise<void> {
     loading = true
     error = null
@@ -70,18 +84,28 @@
   }
 
   onMount(() => {
-    void loadData()
+    if (cache.relations !== null) {
+      // Cache hit — seed immediately, no spinner
+      seedFromCache()
+      loading = false
+      // Background refresh — errors silently swallowed inside refreshRelations
+      backgroundRefresh()
+    } else {
+      // Cache miss — fetch directly and surface errors
+      void loadData()
+    }
   })
 
   async function handleConfirm(relationId: string): Promise<void> {
     try {
       await confirmRelation(sessionToken, relationId)
-      await loadData()
     } catch (e) {
       if (!handle401(e)) {
         error = e instanceof Error ? e.message : String(e)
+        return
       }
     }
+    backgroundRefresh()
   }
 
   async function handleDelete(relationId: string): Promise<void> {
@@ -90,10 +114,10 @@
     } catch (e) {
       if (!handle401(e)) {
         error = e instanceof Error ? e.message : String(e)
+        return
       }
-    } finally {
-      await loadData()
     }
+    backgroundRefresh()
   }
 
   async function handleSend(): Promise<void> {
@@ -104,14 +128,15 @@
       await sendRelation(sessionToken, sendEmail.trim(), sendLabel.trim())
       sendEmail = ''
       sendLabel = ''
-      await loadData()
     } catch (e) {
       if (!handle401(e)) {
         sendError = e instanceof Error ? e.message : String(e)
       }
-    } finally {
       sending = false
+      return
     }
+    sending = false
+    backgroundRefresh()
   }
 </script>
 

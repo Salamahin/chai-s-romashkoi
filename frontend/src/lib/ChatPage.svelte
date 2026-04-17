@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { getSessionToken, clearSession } from './auth_service'
-  import { getHomeData } from './home_service'
   import { listEntries, createEntry, editEntry, deleteEntry } from './log_service'
+  import { getHomeData } from './home_service'
+  import { cache, refreshLog, currentWeekWindow } from './app_cache.svelte'
   import type { ChatMessage } from './chat_types'
   import ChatMessageList from './ChatMessageList.svelte'
   import ProfilePage from './ProfilePage.svelte'
@@ -25,12 +26,6 @@
 
   // Track the oldest week_start loaded so far for "load previous"
   let oldestWeekStart: Date | null = null
-
-  function currentWeekWindow(): { weekStart: string; weekEnd: string } {
-    const weekEnd = new Date()
-    const weekStart = new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000)
-    return { weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() }
-  }
 
   function entryToMessage(entry: { entry_id: string; raw_text: string; logged_at: string; updated_at: string }): ChatMessage {
     return {
@@ -64,25 +59,42 @@
     const { weekStart, weekEnd } = currentWeekWindow()
     oldestWeekStart = new Date(weekStart)
 
-    try {
-      const [logResult, homeResult] = await Promise.allSettled([
-        listEntries(token, weekStart, weekEnd),
-        getHomeData(token),
-      ])
-      if (logResult.status === 'rejected') {
-        const msg = logResult.reason instanceof Error ? logResult.reason.message : String(logResult.reason)
+    if (cache.log !== null) {
+      // Cache hit — seed immediately, then refresh in background (errors silently swallowed)
+      messages = cache.log.entries.map(entryToMessage)
+      if (cache.homeData !== null) {
+        pendingCount = cache.homeData.pending_relations_count
+      }
+      void refreshLog(token).then(() => {
+        if (cache.log !== null) {
+          messages = cache.log.entries.map(entryToMessage)
+        }
+        if (cache.homeData !== null) {
+          pendingCount = cache.homeData.pending_relations_count
+        }
+      })
+    } else {
+      // Cache miss (prefetch failed) — fetch directly and surface errors
+      try {
+        const [logResult, homeResult] = await Promise.allSettled([
+          listEntries(token, weekStart, weekEnd),
+          getHomeData(token),
+        ])
+        if (logResult.status === 'rejected') {
+          const msg = logResult.reason instanceof Error ? logResult.reason.message : String(logResult.reason)
+          if (handleAuthError(msg)) return
+          loadError = msg
+        } else {
+          messages = logResult.value.entries.map(entryToMessage)
+        }
+        if (homeResult.status === 'fulfilled') {
+          pendingCount = homeResult.value.pending_relations_count
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
         if (handleAuthError(msg)) return
         loadError = msg
-      } else {
-        messages = logResult.value.entries.map(entryToMessage)
       }
-      if (homeResult.status === 'fulfilled') {
-        pendingCount = homeResult.value.pending_relations_count
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      if (handleAuthError(msg)) return
-      loadError = msg
     }
   })
 
