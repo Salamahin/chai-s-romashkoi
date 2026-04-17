@@ -58,6 +58,12 @@
     }
   }
 
+  function backgroundRefresh(): void {
+    void refreshRelations(sessionToken).then(() => {
+      seedFromCache()
+    })
+  }
+
   async function loadData(): Promise<void> {
     loading = true
     error = null
@@ -83,9 +89,7 @@
       seedFromCache()
       loading = false
       // Background refresh — errors silently swallowed inside refreshRelations
-      void refreshRelations(sessionToken).then(() => {
-        seedFromCache()
-      })
+      backgroundRefresh()
     } else {
       // Cache miss — fetch directly and surface errors
       void loadData()
@@ -101,9 +105,7 @@
         return
       }
     }
-    void refreshRelations(sessionToken).then(() => {
-      seedFromCache()
-    })
+    backgroundRefresh()
   }
 
   async function handleDelete(relationId: string): Promise<void> {
@@ -112,11 +114,10 @@
     } catch (e) {
       if (!handle401(e)) {
         error = e instanceof Error ? e.message : String(e)
+        return
       }
     }
-    void refreshRelations(sessionToken).then(() => {
-      seedFromCache()
-    })
+    backgroundRefresh()
   }
 
   async function handleSend(): Promise<void> {
@@ -135,9 +136,7 @@
       return
     }
     sending = false
-    void refreshRelations(sessionToken).then(() => {
-      seedFromCache()
-    })
+    backgroundRefresh()
   }
 </script>
 

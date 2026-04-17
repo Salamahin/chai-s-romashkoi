@@ -14,24 +14,20 @@
 
   let authState = $state<AuthState>(initialAuthState())
 
-  $effect(() => {
-    if (authState === 'refreshing') {
-      silentRefresh(
-        async () => {
-          const token = getSessionToken()
-          if (token) await prefetch(token)
-          authState = 'authenticated'
-        },
-        () => { authState = 'unauthenticated' },
-      )
-    }
-  })
-
   async function handleAuthenticated(): Promise<void> {
     const token = getSessionToken()
     if (token) await prefetch(token)
     authState = 'authenticated'
   }
+
+  $effect(() => {
+    if (authState === 'refreshing') {
+      silentRefresh(
+        handleAuthenticated,
+        () => { authState = 'unauthenticated' },
+      )
+    }
+  })
 </script>
 
 {#if authState === 'authenticated'}
