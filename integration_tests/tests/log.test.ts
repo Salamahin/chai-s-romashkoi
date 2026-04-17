@@ -41,7 +41,7 @@ test('GET /log is called with correct path after login', async ({ page }) => {
   // Regression: Lambda Function URLs have a trailing slash; concatenating
   // it with "/log" produced "//log" which AWS rejects with 403.
   // Re-login from scratch so we can capture the initial request.
-  await page.evaluate(() => sessionStorage.clear())
+  await page.evaluate(() => localStorage.removeItem('session'))
 
   const logUrls: string[] = []
   page.on('request', (req) => {
@@ -66,7 +66,7 @@ test('403 on initial log fetch shows an error banner', async ({ page }) => {
   // initial ChatPage mount request.
   // Scope the pattern to the backend origin only — a broad "**/log*" also
   // matches Vite module requests like /src/lib/log_service.ts and breaks SPA loading.
-  await page.evaluate(() => sessionStorage.clear())
+  await page.evaluate(() => localStorage.removeItem('session'))
 
   await page.route('http://localhost:8000/log*', (route) => {
     if (route.request().method() === 'GET') {
