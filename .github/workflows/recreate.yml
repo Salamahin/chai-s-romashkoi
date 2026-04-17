@@ -1,0 +1,115 @@
+name: Recreate infrastructure
+
+# Destroys all application-layer AWS resources and recreates them from scratch.
+# The Terraform state backend (S3 bucket + DynamoDB lock table) is NOT affected —
+# those live in deploy/bootstrap/ which uses local state and is never referenced here.
+#
+# NOTE: Route53/ACM certificate recreation requires DNS propagation and may take
+# several minutes before the site is reachable after the workflow completes.
+#
+# Triggered manually only. Type "yes" in the confirmation input to proceed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm full infrastructure destroy + recreate'
+        required: true
+        default: ""
+
+jobs:
+  recreate:
+    runs-on: ubuntu-latest
+    environment: production
+    if: ${{ github.event.inputs.confirm == 'yes' }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
+      TF_VAR_layer_zip_path: ../backend/dist/layer.zip
+      TF_VAR_auth_zip_path: ../backend/dist/auth.zip
+      TF_VAR_app_zip_path: ../backend/dist/app.zip
+      TF_VAR_profile_zip_path: ../backend/dist/profile.zip
+      TF_VAR_relations_zip_path: ../backend/dist/relations.zip
+      TF_VAR_log_zip_path: ../backend/dist/log.zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync
+
+      - name: Build Lambda zips
+        run: scripts/build_lambdas.sh
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::978092319422:role/chai-s-romashkoi-deploy
+          aws-region: eu-central-1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: deploy
+        run: terraform init
+
+      - name: Clear stale Terraform state lock
+        run: |
+          aws dynamodb delete-item \
+            --table-name chai-s-romashkoi-tf-lock \
+            --key '{"LockID": {"S": "chai-s-romashkoi-tf-state/prod/terraform.tfstate"}}' \
+            2>/dev/null || true
+
+      - name: Terraform destroy
+        working-directory: deploy
+        run: terraform destroy -auto-approve
+
+      - name: Terraform apply
+        working-directory: deploy
+        run: terraform apply -auto-approve
+
+      - name: Read Terraform outputs
+        id: tf
+        working-directory: deploy
+        run: |
+          echo "cf_dist_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
+          echo "frontend_bucket=$(terraform output -raw frontend_bucket_name)"  >> "$GITHUB_OUTPUT"
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Sync frontend assets to S3
+        run: |
+          aws s3 sync frontend/dist/ "s3://${{ steps.tf.outputs.frontend_bucket }}/" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.tf.outputs.cf_dist_id }} \
+            --paths "/*"
